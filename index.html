@@ -4584,7 +4584,7 @@
 const firebaseConfig = {
   apiKey: "AIzaSyG0AXZ9M9OgSA1MI-G22Es0Ybq3LtWKHs",
   authDomain: "soul-of-cinder.firebaseapp.com",
-  databaseURL: "https://soul-of-cinder-default-rtdb.firebaseio.com",
+  databaseURL: "https://soul-of-cinder-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "soul-of-cinder",
   storageBucket: "soul-of-cinder.firebasestorage.app",
   messagingSenderId: "902647278591",
@@ -4632,41 +4632,58 @@ const coop = {
     setCoopStatus("Solo Mode");
   },
   async createRoom() {
-    await this.leaveRoom();
-    const code = this.makeRoomCode();
-    const roomRef = firebaseDb.ref(`rooms/${code}`);
-    this.joinedAt = Date.now();
-    this.roomCode = code;
-    this.roomRef = roomRef;
-    this.hostId = this.playerId;
-    this.playersRef = roomRef.child("players");
-    this.eventsRef = roomRef.child("events");
-    this.worldRef = roomRef.child("world");
-    await roomRef.set({ hostId: this.playerId, createdAt: this.joinedAt, players: { [this.playerId]: this.localPlayerState() } });
-    this.playersRef.child(this.playerId).onDisconnect().remove();
-    this.bindRoom();
-    setCoopStatus(`Room ${code} [HOST] • 1/4`);
+    try {
+      await this.leaveRoom();
+      const code = this.makeRoomCode();
+      const roomRef = firebaseDb.ref(`rooms/${code}`);
+      this.joinedAt = Date.now();
+      this.roomCode = code;
+      this.roomRef = roomRef;
+      this.hostId = this.playerId;
+      this.playersRef = roomRef.child("players");
+      this.eventsRef = roomRef.child("events");
+      this.worldRef = roomRef.child("world");
+      await roomRef.set({ hostId: this.playerId, createdAt: this.joinedAt, players: { [this.playerId]: this.localPlayerState() } });
+      this.playersRef.child(this.playerId).onDisconnect().remove();
+      this.bindRoom();
+      setCoopStatus(`Room ${code} [HOST] • 1/4`);
+    } catch (error) {
+      console.error("Firebase create room failed:", error);
+      this.roomCode = null;
+      this.roomRef = null;
+      this.playersRef = null;
+      this.eventsRef = null;
+      this.worldRef = null;
+      remotePlayers.clear();
+      setCoopStatus(error.code || error.message || "Cannot create room");
+    }
   },
   async joinRoom(code) {
-    const clean = String(code || "").trim().toUpperCase();
-    if (!clean) return;
-    await this.leaveRoom();
-    const roomRef = firebaseDb.ref(`rooms/${clean}`);
-    const snapshot = await roomRef.once("value");
-    if (!snapshot.exists()) { setCoopStatus("Room not found"); return; }
-    const room = snapshot.val();
-    const playerCount = room.players ? Object.keys(room.players).length : 0;
-    if (playerCount >= 4) { setCoopStatus("Room is full"); return; }
-    this.joinedAt = Date.now();
-    this.roomCode = clean;
-    this.roomRef = roomRef;
-    this.hostId = room.hostId;
-    this.playersRef = roomRef.child("players");
-    this.eventsRef = roomRef.child("events");
-    this.worldRef = roomRef.child("world");
-    await this.playersRef.child(this.playerId).set(this.localPlayerState());
-    this.playersRef.child(this.playerId).onDisconnect().remove();
-    this.bindRoom();
+    try {
+      const clean = String(code || "").trim().toUpperCase();
+      if (!clean) return;
+      await this.leaveRoom();
+      const roomRef = firebaseDb.ref(`rooms/${clean}`);
+      const snapshot = await roomRef.once("value");
+      if (!snapshot.exists()) { setCoopStatus("Room not found"); return; }
+      const room = snapshot.val();
+      const playerCount = room.players ? Object.keys(room.players).length : 0;
+      if (playerCount >= 4) { setCoopStatus("Room is full"); return; }
+      this.joinedAt = Date.now();
+      this.roomCode = clean;
+      this.roomRef = roomRef;
+      this.hostId = room.hostId;
+      this.playersRef = roomRef.child("players");
+      this.eventsRef = roomRef.child("events");
+      this.worldRef = roomRef.child("world");
+      await this.playersRef.child(this.playerId).set(this.localPlayerState());
+      this.playersRef.child(this.playerId).onDisconnect().remove();
+      this.bindRoom();
+    } catch (error) {
+      console.error("Firebase join room failed:", error);
+      this.roomCode = null;
+      setCoopStatus(error.code || error.message || "Cannot join room");
+    }
   },
   bindRoom() {
     this.rosterListener = this.playersRef.on("value", (snapshot) => {
