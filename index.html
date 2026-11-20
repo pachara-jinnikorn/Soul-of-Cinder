@@ -1,0 +1,5261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soul of Cinder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700;900&family=Inter:wght@400;600&display=swap');
+
+    * {
+      user-select: none;
+      -webkit-user-select: none;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #030305;
+      color: #e2e8f0;
+      font-family: 'Cinzel', serif;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+
+    .font-decorative {
+      font-family: 'Cinzel Decorative', serif;
+    }
+
+    .shake {
+      animation: screen-shake 0.24s cubic-bezier(.36,.07,.19,.97) both;
+    }
+
+    @keyframes screen-shake {
+      10%, 90% { transform: translate3d(-3px, -2px, 0); }
+      20%, 80% { transform: translate3d(4px, 3px, 0); }
+      30%, 50%, 70% { transform: translate3d(-5px, 3px, 0); }
+      40%, 60% { transform: translate3d(4px, -4px, 0); }
+    }
+
+    .vignette {
+      box-shadow: inset 0 0 140px rgba(0, 0, 0, 0.94), inset 0 0 220px rgba(0, 0, 0, 0.98);
+      pointer-events: none;
+    }
+
+    .souls-border {
+      border: 1.5px solid #4a3e35;
+      box-shadow: 0 0 10px rgba(0,0,0,0.85), inset 0 0 4px rgba(0,0,0,0.9);
+      background: #0d0c10;
+    }
+
+    .hp-fill {
+      background: linear-gradient(180deg, #dc2626 0%, #991b1b 50%, #450a0a 100%);
+      box-shadow: 0 0 10px rgba(220, 38, 38, 0.6);
+    }
+
+    .stam-fill {
+      background: linear-gradient(180deg, #16a34a 0%, #15803d 50%, #052e16 100%);
+      box-shadow: 0 0 8px rgba(22, 163, 74, 0.6);
+    }
+
+    .boss-fill {
+      background: linear-gradient(180deg, #ef4444 0%, #b91c1c 50%, #450a0a 100%);
+      box-shadow: 0 0 14px rgba(239, 68, 68, 0.7);
+    }
+
+    .stagger-fill {
+      background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
+    }
+
+    .fade-banner {
+      animation: bannerFade 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes bannerFade {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -46%) scale(0.92);
+        letter-spacing: 16px;
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+        letter-spacing: 8px;
+      }
+    }
+
+    .modal-glass {
+      background: rgba(8, 7, 11, 0.93);
+      backdrop-filter: blur(10px);
+    }
+  </style>
+</head>
+<body class="w-screen h-screen flex flex-col items-center justify-center relative bg-black">
+
+  <!-- Main Game Frame -->
+  <div id="game-container" class="relative w-full max-w-[1060px] h-full max-h-[740px] flex flex-col justify-between items-center p-3 select-none overflow-hidden rounded-xl border border-stone-800 shadow-2xl bg-[#08070b]">
+    
+    <!-- TOP HUD: Player Gauges, Weapon Badge & Estus -->
+    <header class="w-full flex justify-between items-start z-20 pointer-events-none px-3 pt-1">
+      <div class="flex flex-col gap-2 w-80">
+        <!-- HP Gauge -->
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-amber-100/70 font-semibold tracking-widest w-9">HP</span>
+          <div class="flex-1 h-3.5 souls-border rounded-sm relative overflow-hidden">
+            <div id="player-hp-bar" class="hp-fill h-full w-full transition-all duration-75"></div>
+          </div>
+          <span id="player-hp-txt" class="text-[10px] text-stone-400 font-mono w-10 text-right">100</span>
+        </div>
+        <!-- Stamina Gauge -->
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-amber-100/70 font-semibold tracking-widest w-9">STAM</span>
+          <div class="flex-1 h-2.5 souls-border rounded-sm relative overflow-hidden">
+            <div id="player-stam-bar" class="stam-fill h-full w-full transition-all duration-75"></div>
+          </div>
+          <span id="player-stam-txt" class="text-[10px] text-stone-400 font-mono w-10 text-right">100</span>
+        </div>
+      </div>
+
+      <!-- Center Status / Location Tag -->
+      <div class="flex flex-col items-center">
+        <div id="location-badge" class="px-3 py-1 bg-stone-900/90 border border-stone-700/80 rounded text-[11px] font-decorative uppercase tracking-[3px] text-amber-200">
+          Firelink Shrine
+        </div>
+        <div id="boss-progress-tag" class="text-[10px] font-mono tracking-widest text-stone-400 mt-1">
+          SANCTUARY OF CINDERS
+        </div>
+      </div>
+
+      <!-- Weapon Badge & Estus -->
+      <div class="flex flex-col items-end gap-1.5">
+        <div class="flex items-center gap-1.5" id="estus-container"></div>
+        <div class="text-[10px] tracking-widest text-amber-300 uppercase font-sans font-semibold">
+          [E] Estus Flask (<span id="estus-count">3</span>)
+        </div>
+        <div id="current-weapon-hud" class="flex items-center gap-2 mt-1 px-2.5 py-1 bg-stone-950 border border-amber-900/40 rounded text-right">
+          <div>
+            <div id="hud-weapon-name" class="text-[11px] font-bold text-amber-100 uppercase tracking-wider">Vanguard Longsword</div>
+            <div id="hud-weapon-type" class="text-[9px] text-stone-400 font-mono tracking-wider">Straight Sword</div>
+          </div>
+          <div id="hud-weapon-icon" class="w-6 h-6 rounded bg-stone-800 border border-amber-600/50 flex items-center justify-center text-amber-300 text-xs font-serif font-black">
+            ⚔
+          </div>
+        </div>
+      </div>
+    </header>
+   <div id="coop-bar" class="w-full flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 bg-stone-950/90 border border-stone-800/90 rounded-lg text-[11px] font-sans z-20">
+      <div class="flex items-center gap-2">
+        <span id="coop-status" class="text-stone-400 font-mono">Solo Mode</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <input id="coop-server-input" type="text" value="ws://localhost:8080" placeholder="ws://RADMIN-IP:8080" title="WebSocket server address" class="w-44 px-2 py-1 rounded bg-stone-900 border border-stone-700 text-amber-100 font-mono text-[11px] focus:outline-none focus:border-amber-500" />
+        <button id="create-room-btn" type="button" class="px-2.5 py-1 rounded bg-amber-950/70 border border-amber-700/70 text-amber-200 hover:bg-amber-900 transition cursor-pointer text-[10px] font-semibold uppercase tracking-wider">
+          Create Room
+        </button>
+        <input id="room-code-input" type="text" maxlength="6" placeholder="CODE" class="w-20 px-2 py-1 rounded bg-stone-900 border border-stone-700 text-amber-100 font-mono text-[11px] uppercase focus:outline-none focus:border-amber-500" />
+        <button id="join-room-btn" type="button" class="px-2.5 py-1 rounded bg-stone-900 border border-stone-700 text-stone-200 hover:border-amber-500 transition cursor-pointer text-[10px] font-semibold uppercase tracking-wider">
+          Join
+        </button>
+      </div>
+    </div>
+    <!-- Canvas Play Area with 2.5D Isometric Tilt View -->
+    <div class="relative w-full flex-1 flex items-center justify-center my-1 overflow-hidden">
+      <canvas id="arenaCanvas" width="1020" height="530" class="rounded-lg shadow-inner bg-[#07060a]"></canvas>
+      <div class="vignette absolute inset-0 rounded-lg"></div>
+
+      <!-- Interaction Prompt Popup -->
+      <div id="interact-prompt" class="absolute bottom-6 left-1/2 -translate-x-1/2 hidden z-30 pointer-events-none text-center bg-black/90 px-4 py-2 rounded border border-amber-500/70 text-amber-200 text-xs tracking-widest uppercase font-semibold shadow-lg">
+        <span class="text-amber-400 font-bold">[E / SPACE]</span> <span id="interact-action-text">Interact</span>
+      </div>
+
+      <!-- NPC Dialogue Box -->
+      <div id="dialogue-box" class="absolute bottom-5 left-1/2 -translate-x-1/2 w-11/12 max-w-xl hidden z-40 bg-stone-950/95 border border-amber-700/80 rounded-lg p-4 shadow-2xl backdrop-blur-md">
+        <div class="flex items-center justify-between border-b border-stone-800 pb-1.5 mb-2">
+          <span id="npc-name" class="font-decorative text-amber-300 text-sm tracking-wider uppercase font-bold"></span>
+          <span class="text-[10px] text-stone-500 font-mono uppercase tracking-widest">[SPACE / E] Continue</span>
+        </div>
+        <p id="npc-text" class="text-stone-300 text-xs sm:text-sm font-serif leading-relaxed italic"></p>
+      </div>
+
+      <!-- Arena Wipe Warning -->
+      <div id="wipe-warning" class="absolute top-8 left-1/2 -translate-x-1/2 hidden z-30 pointer-events-none text-center bg-red-950/95 border-2 border-red-500 text-red-200 px-6 py-2.5 rounded-lg shadow-[0_0_30px_rgba(239,68,68,0.85)]">
+        <div class="font-decorative text-base font-black tracking-[4px] text-red-400 uppercase">⚠ APOCALYPTIC BLAST IMMINENT ⚠</div>
+        <div id="wipe-shelter-status" class="text-[11px] font-sans tracking-widest text-amber-300 font-bold mt-0.5">STAND IN A GREEN PILLAR SHADOW ZONE!</div>
+        <div class="w-full bg-red-950 h-2 mt-1.5 rounded border border-red-700 overflow-hidden">
+          <div id="wipe-timer-bar" class="bg-amber-400 h-full w-full transition-none"></div>
+        </div>
+      </div>
+
+      <!-- Cinematic Death / Victory Banner -->
+      <div id="cinematic-banner" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 hidden flex-col items-center justify-center z-40 pointer-events-none text-center">
+        <h1 id="banner-title" class="font-decorative text-4xl sm:text-6xl uppercase tracking-[8px] font-black drop-shadow-[0_0_30px_rgba(0,0,0,0.95)]"></h1>
+        <p id="banner-subtitle" class="font-sans text-xs sm:text-sm tracking-widest text-stone-300/90 mt-3 uppercase drop-shadow"></p>
+        <div id="banner-reward" class="text-xs text-amber-300 mt-2 font-mono uppercase tracking-wider font-bold"></div>
+      </div>
+
+      <!-- Critical Riposte Prompt -->
+      <div id="center-prompt" class="absolute top-[65%] left-1/2 -translate-x-1/2 hidden z-30 pointer-events-none text-center bg-black/85 px-5 py-2 rounded-md border border-amber-500/60 text-amber-300 text-xs sm:text-sm tracking-widest uppercase font-bold shadow-[0_0_20px_rgba(245,158,11,0.5)]">
+        CRITICAL RIPOSTE OPPORTUNITY [L-CLICK]
+      </div>
+    </div>
+
+    <!-- BOTTOM HUD: Boss Health Bar & Poise Bar -->
+    <footer id="boss-hud" class="w-full max-w-[720px] hidden flex-col items-center gap-1 z-20 pointer-events-none px-2 mb-1">
+      <div class="w-full flex justify-between items-baseline px-1">
+        <span id="boss-name" class="text-xs sm:text-sm tracking-[3px] text-red-200 font-bold uppercase drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]">
+          Lord Malakor, The Iron Warden
+        </span>
+        <span id="boss-hp-count" class="text-[11px] tracking-wider text-amber-300/90 font-mono font-bold">1250 / 1250</span>
+      </div>
+      <div class="w-full h-3.5 souls-border rounded-sm relative overflow-hidden">
+        <div id="boss-hp-bar" class="boss-fill h-full w-full transition-all duration-75"></div>
+      </div>
+      <div class="w-full flex items-center gap-2 mt-0.5 opacity-85">
+        <span class="text-[9px] tracking-widest text-stone-400 font-mono">POSTURE</span>
+        <div class="flex-1 h-1.5 bg-stone-950 border border-stone-800 rounded-sm overflow-hidden">
+          <div id="boss-poise-bar" class="stagger-fill h-full w-0 transition-all duration-100"></div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- CONTROLS & UTILITY BAR -->
+    <div class="w-full flex flex-wrap justify-between items-center text-[11px] text-stone-400 font-sans border-t border-stone-800/80 pt-2 px-2 z-20">
+      <div class="flex items-center gap-2 sm:gap-4 flex-wrap">
+        <span><kbd class="px-1.5 py-0.5 rounded bg-stone-900 border border-stone-700 text-amber-200">WASD</kbd> Move</span>
+        <span><kbd class="px-1.5 py-0.5 rounded bg-stone-900 border border-stone-700 text-amber-200">L-CLICK</kbd> Strike</span>
+        <span><kbd class="px-1.5 py-0.5 rounded bg-stone-900 border border-stone-700 text-sky-300">R-CLICK / F</kbd> Parry</span>
+        <span><kbd class="px-1.5 py-0.5 rounded bg-stone-900 border border-stone-700 text-amber-200">SPACE</kbd> Roll</span>
+        <span><kbd class="px-1.5 py-0.5 rounded bg-stone-900 border border-stone-700 text-amber-200">E</kbd> Rest / Talk / Estus</span>
+        <span><kbd class="px-1.5 py-0.5 rounded bg-stone-900 border border-stone-700 text-amber-200">TAB</kbd> Arsenal</span>
+      </div>
+
+      <div class="flex items-center gap-2 mt-1 sm:mt-0">
+        <button id="arsenal-btn" class="px-2.5 py-1 rounded bg-stone-900 border border-amber-900/60 text-amber-300 hover:text-amber-100 hover:border-amber-500 transition cursor-pointer text-[10px] uppercase tracking-wider font-semibold">
+          Arsenal [TAB]
+        </button>
+        <button id="mute-btn" class="px-2.5 py-1 rounded bg-stone-900 border border-stone-700 text-stone-300 hover:text-white hover:border-stone-500 transition cursor-pointer text-[10px] uppercase tracking-wider">
+          Audio: ON
+        </button>
+        <button id="restart-btn" class="px-2.5 py-1 rounded bg-stone-900 border border-red-900/60 text-red-300 hover:bg-red-950/40 hover:border-red-600 transition cursor-pointer text-[10px] uppercase font-bold tracking-wider">
+          [R] Shrine
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WEAPON ARSENAL MODAL -->
+  <div id="arsenal-modal" class="fixed inset-0 modal-glass z-50 hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-[#0b0a10] border border-amber-800/60 rounded-xl p-5 shadow-2xl flex flex-col gap-4">
+      <div class="flex justify-between items-center border-b border-stone-800 pb-3">
+        <div>
+          <h2 class="font-decorative text-xl text-amber-200 uppercase tracking-widest">Weapon Arsenal</h2>
+          <p class="text-xs text-stone-400 font-sans mt-0.5">Slay the 10 Lords of Cinder to forge their legendary weapons.</p>
+        </div>
+        <button id="close-arsenal-btn" class="text-stone-400 hover:text-white text-lg font-mono px-2 py-1 rounded bg-stone-900 border border-stone-700">✕</button>
+      </div>
+
+      <div id="arsenal-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[380px] overflow-y-auto pr-1"></div>
+
+      <div class="flex justify-between items-center text-xs text-stone-400 border-t border-stone-800 pt-3">
+        <span>Unlocked: <span id="unlocked-count" class="text-amber-300 font-mono font-bold">1</span> / 10</span>
+        <button id="close-arsenal-footer-btn" class="px-4 py-1.5 rounded bg-amber-950 border border-amber-600 text-amber-200 font-bold uppercase text-[10px] tracking-wider hover:bg-amber-900 transition">
+          Confirm Selection
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       SYNTHESIZED SOUND ENGINE (Web Audio API)
+       ========================================================================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+        this.musicGain = null;
+        this.musicTimer = null;
+        this.musicTheme = null;
+        this.musicStep = 0;
+        this.musicRequested = false;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContext) return;
+          this.ctx = new AudioContext();
+          this.musicGain = this.ctx.createGain();
+          this.musicGain.gain.setValueAtTime(0.09, this.ctx.currentTime);
+          this.musicGain.connect(this.ctx.destination);
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume().then(() => {
+            if (!this.muted && this.musicRequested) {
+              const theme = this.musicTheme || 'sanctuary';
+              if (!(this.musicTimer && this.musicTheme === theme)) {
+                this.beginBGM(theme);
+              }
+            }
+          }).catch(() => {});
+        } else if (this.ctx.state === 'running' && this.musicRequested) {
+          const theme = this.musicTheme || 'sanctuary';
+          if (!(this.musicTimer && this.musicTheme === theme)) {
+            this.beginBGM(theme);
+          }
+        }
+      }
+
+      setMuted(muted) {
+        this.muted = muted;
+        if (this.muted) {
+          this.stopBGM();
+        } else {
+          this.musicRequested = true;
+          this.init();
+        }
+      }
+
+      startBGM(theme = 'sanctuary') {
+        if (this.muted) return;
+        this.musicRequested = true;
+        this.musicTheme = theme;
+        this.init();
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume().then(() => {
+            if (!this.muted && this.ctx.state === 'running') {
+              if (!(this.musicTimer && this.musicTheme === theme)) this.beginBGM(theme);
+            }
+          }).catch(() => {});
+          return;
+        }
+        if (this.ctx.state !== 'running') return;
+        if (this.musicTimer && this.musicTheme === theme) return;
+
+        this.beginBGM(theme);
+      }
+
+      beginBGM(theme = 'sanctuary') {
+        this.stopBGM(false);
+        this.musicTheme = theme;
+        this.musicStep = 0;
+        this.playBGMStep();
+        this.musicTimer = setInterval(() => this.playBGMStep(), theme === 'boss' ? 260 : 420);
+      }
+
+      stopBGM(clearTheme = true) {
+        if (this.musicTimer) {
+          clearInterval(this.musicTimer);
+          this.musicTimer = null;
+        }
+        if (clearTheme) this.musicTheme = null;
+        if (this.musicGain && this.ctx) {
+          this.musicGain.gain.cancelScheduledValues(this.ctx.currentTime);
+          this.musicGain.gain.setTargetAtTime(this.muted ? 0 : 0.09, this.ctx.currentTime, 0.08);
+        }
+      }
+
+      playBGMStep() {
+        if (this.muted || !this.ctx || this.ctx.state !== 'running') return;
+
+        const bossThemeIndex = typeof currentBossIndex === 'number' ? currentBossIndex : 0;
+        const sanctuaryNotes = [110, 130.81, 146.83, 130.81, 98, 123.47, 146.83, 123.47];
+        const bossNotes = [
+          [55, 65.41, 82.41],
+          [55, 58.27, 73.42],
+          [49, 65.41, 73.42],
+          [55, 61.74, 82.41],
+          [46.25, 55, 69.3],
+          [49, 58.27, 73.42],
+          [55, 73.42, 82.41],
+          [46.25, 61.74, 69.3]
+        ];
+        const isBoss = this.musicTheme === 'boss';
+        const notes = isBoss
+          ? bossNotes[bossThemeIndex % bossNotes.length]
+          : [sanctuaryNotes[this.musicStep % sanctuaryNotes.length]];
+
+        notes.forEach((frequency, noteIndex) => {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const filter = this.ctx.createBiquadFilter();
+
+          osc.type = isBoss ? (bossThemeIndex % 2 ? 'triangle' : 'sawtooth') : 'sine';
+          osc.frequency.setValueAtTime(frequency, now);
+          if (isBoss) osc.detune.setValueAtTime((bossThemeIndex % 5 - 2) * 3, now);
+
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(isBoss ? 520 : 820, now);
+          filter.Q.setValueAtTime(isBoss ? 3 : 1, now);
+
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(isBoss ? 0.14 / (noteIndex + 1) : 0.20, now + 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + (isBoss ? 1.8 : 2.6));
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.musicGain);
+          osc.start(now);
+          osc.stop(now + (isBoss ? 2 : 3));
+        });
+
+        if (this.musicStep % 2 === 0 && isBoss) {
+          this.playBossDrone();
+        }
+        this.musicStep++;
+      }
+
+      playBossDrone() {
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(27.5 + ((typeof currentBossIndex === 'number' ? currentBossIndex : 0) % 5) * 2.75, now);
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.08, now + 0.18);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+        osc.connect(gain);
+        gain.connect(this.musicGain);
+        osc.start(now);
+        osc.stop(now + 2);
+      }
+
+      playSwordSwing(pitch = 440, duration = 0.16) {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(pitch, now);
+        osc.frequency.exponentialRampToValueAtTime(70, now + duration);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1200, now);
+
+        gain.gain.setValueAtTime(0.24, now);
+        gain.gain.linearRampToValueAtTime(0.001, now + duration);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + duration);
+      }
+
+      playParryWhoosh() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.exponentialRampToValueAtTime(980, now + 0.14);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.14);
+      }
+
+      playDodgeRoll() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const node = this.ctx.createBufferSource();
+        const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.22, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < buffer.length; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.08));
+        }
+        node.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(360, now);
+        filter.Q.setValueAtTime(2.5, now);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.22);
+
+        node.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        node.start(now);
+      }
+
+      playHit() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(130, now);
+        osc.frequency.exponentialRampToValueAtTime(25, now + 0.12);
+
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.linearRampToValueAtTime(0.001, now + 0.12);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      }
+
+      playParryDing() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const bass = this.ctx.createOscillator();
+        const bassGain = this.ctx.createGain();
+        bass.type = 'sine';
+        bass.frequency.setValueAtTime(160, now);
+        bass.frequency.exponentialRampToValueAtTime(35, now + 0.45);
+        bassGain.gain.setValueAtTime(0.55, now);
+        bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        bass.connect(bassGain);
+        bassGain.connect(this.ctx.destination);
+        bass.start(now);
+        bass.stop(now + 0.45);
+
+        [987.77, 1318.51, 1975.53, 2637.02].forEach((f, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(f, now);
+          gain.gain.setValueAtTime(0.38 / (idx + 1), now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.75);
+        });
+      }
+
+      playSlam() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(110, now);
+        osc.frequency.exponentialRampToValueAtTime(20, now + 0.45);
+
+        gain.gain.setValueAtTime(0.65, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.45);
+      }
+
+      playAnvilStrike() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        [880, 1760, 2640].forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, now);
+          gain.gain.setValueAtTime(0.055 / (i + 1), now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.5);
+        });
+      }
+
+      playHeal() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(620, now + 0.4);
+
+        gain.gain.setValueAtTime(0.28, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      }
+
+      playBonfireRest() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        [220, 277.18, 329.63, 440, 554.37].forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, now + i * 0.08);
+          gain.gain.setValueAtTime(0.2, now + i * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2 + i * 0.08);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.08);
+          osc.stop(now + 1.2 + i * 0.08);
+        });
+      }
+
+      playNpcDialogueSound(pitch = 300, volume = 0.12) {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(pitch, now);
+        osc.frequency.exponentialRampToValueAtTime(pitch * 0.85, now + 0.08);
+        gain.gain.setValueAtTime(volume, now);
+        gain.gain.linearRampToValueAtTime(0.001, now + 0.08);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      }
+
+      playStaggerBreak() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        [523.25, 659.25, 1046.5].forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + i * 0.05);
+          gain.gain.setValueAtTime(0.3, now + i * 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6 + i * 0.05);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.05);
+          osc.stop(now + 0.6 + i * 0.05);
+        });
+      }
+
+      playAlarmBeep(freq = 600) {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.24, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.18);
+      }
+
+      playWhoosh(f = 300) {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f, now);
+        osc.frequency.exponentialRampToValueAtTime(70, now + 0.2);
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    /* ==========================================================================
+       WEAPON ARSENAL DEFINITIONS (10 DETAILED WEAPONS)
+       ========================================================================== */
+    const WEAPONS = [
+      {
+        id: 'w0',
+        name: 'Vanguard Longsword',
+        type: 'Straight Sword',
+        icon: '⚔',
+        desc: 'Standard Firelink steel. Brass pommel, engraved silver crossguard, and blood fuller groove.',
+        damage: 42,
+        reach: 75,
+        attackDuration: 20,
+        stamCost: 20,
+        poiseDmg: 28,
+        color: '#e2e8f0',
+        slashColor: 'rgba(255, 255, 255, 0.75)',
+        unlocked: true,
+        source: 'Starting Blade'
+      },
+      {
+        id: 'w1',
+        name: 'Greatsword of Malakor',
+        type: 'Colossal Greatsword',
+        icon: '🗡',
+        desc: 'Massive iron slab with leather-wrapped two-handed hilt, serrated edges, and glowing cinder core.',
+        damage: 78,
+        reach: 105,
+        attackDuration: 28,
+        stamCost: 35,
+        poiseDmg: 55,
+        color: '#f87171',
+        slashColor: 'rgba(239, 68, 68, 0.8)',
+        unlocked: false,
+        source: 'Defeat Boss 1 (Lord Malakor)'
+      },
+      {
+        id: 'w2',
+        name: 'Dual Shadow Daggers',
+        type: 'Twin Daggers',
+        icon: '🗡',
+        desc: 'Curved obsidian blades with cord-wrapped ring grips for ultra-rapid consecutive slashes.',
+        damage: 28,
+        reach: 52,
+        attackDuration: 13,
+        stamCost: 11,
+        poiseDmg: 16,
+        color: '#a855f7',
+        slashColor: 'rgba(168, 85, 247, 0.85)',
+        unlocked: false,
+        source: 'Defeat Boss 2 (Vaelith)'
+      },
+      {
+        id: 'w3',
+        name: 'Pyre Flame Halberd',
+        type: 'Halberd Spear',
+        icon: '🔱',
+        desc: 'Dark ashwood polearm tipped with a flared crescent axe and searing pyre flame blade.',
+        damage: 56,
+        reach: 95,
+        attackDuration: 22,
+        stamCost: 24,
+        poiseDmg: 35,
+        color: '#f97316',
+        slashColor: 'rgba(249, 115, 22, 0.85)',
+        unlocked: false,
+        source: 'Defeat Boss 3 (Ignis)'
+      },
+      {
+        id: 'w4',
+        name: 'Glacial Warhammer',
+        type: 'Colossal Hammer',
+        icon: '🔨',
+        desc: 'Chiseled glacial prism bound with iron banding. Pulverizes poise and causes earth fissures.',
+        damage: 92,
+        reach: 90,
+        attackDuration: 32,
+        stamCost: 40,
+        poiseDmg: 70,
+        color: '#38bdf8',
+        slashColor: 'rgba(56, 189, 248, 0.85)',
+        unlocked: false,
+        source: 'Defeat Boss 4 (Glacius)'
+      },
+      {
+        id: 'w5',
+        name: 'Thorn Bramble Scourge',
+        type: 'Segmented Whip',
+        icon: '➰',
+        desc: 'Flexible barbed thorny briar that lashes wide outward arcs, bypassing shields.',
+        damage: 48,
+        reach: 115,
+        attackDuration: 23,
+        stamCost: 22,
+        poiseDmg: 25,
+        color: '#22c55e',
+        slashColor: 'rgba(34, 197, 94, 0.85)',
+        unlocked: false,
+        source: 'Defeat Boss 5 (Sylvanas)'
+      },
+      {
+        id: 'w6',
+        name: 'Storm Valkyrie Spear',
+        type: 'Lightning Partisan',
+        icon: '⚡',
+        desc: 'Golden-winged spear channelled with crackling storm lightning for piercing range.',
+        damage: 64,
+        reach: 110,
+        attackDuration: 19,
+        stamCost: 25,
+        poiseDmg: 38,
+        color: '#facc15',
+        slashColor: 'rgba(250, 204, 21, 0.85)',
+        unlocked: false,
+        source: 'Defeat Boss 6 (Zephyr)'
+      },
+      {
+        id: 'w7',
+        name: 'Sentinel Sand Scythe',
+        type: 'Curved Greatscythe',
+        icon: '🌙',
+        desc: 'Weathered tomb guardian sickle with hooked blade and sand-wrapped grip.',
+        damage: 68,
+        reach: 100,
+        attackDuration: 24,
+        stamCost: 28,
+        poiseDmg: 44,
+        color: '#fbbf24',
+        slashColor: 'rgba(251, 191, 36, 0.85)',
+        unlocked: false,
+        source: 'Defeat Boss 7 (Ouros)'
+      },
+      {
+        id: 'w8',
+        name: 'Void Weaver Katana',
+        type: 'Curved Katana',
+        icon: '⚔',
+        desc: 'Folded astral steel that bends space, warping the wielder forward during slash motions.',
+        damage: 58,
+        reach: 82,
+        attackDuration: 16,
+        stamCost: 18,
+        poiseDmg: 32,
+        color: '#c084fc',
+        slashColor: 'rgba(192, 132, 252, 0.9)',
+        unlocked: false,
+        source: 'Defeat Boss 8 (Nyx)'
+      },
+      {
+        id: 'w9',
+        name: 'Chimera Beast Talons',
+        type: 'Claw Fist',
+        icon: '🐾',
+        desc: 'Savage beast claws that tear flesh, restoring 4 HP to the wielder on successful hits.',
+        damage: 38,
+        reach: 58,
+        attackDuration: 14,
+        stamCost: 14,
+        poiseDmg: 20,
+        color: '#fb7185',
+        slashColor: 'rgba(251, 113, 133, 0.85)',
+        unlocked: false,
+        source: 'Defeat Boss 9 (Gorgon)'
+      },
+      {
+        id: 'w10',
+        name: 'Crown of the First Sovereign',
+        type: 'Godslayer Relic',
+        icon: '👑',
+        desc: 'Relic of the Primordial Ascendant. Bathed in sacred golden luminescence and maximum staggering weight.',
+        damage: 110,
+        reach: 120,
+        attackDuration: 22,
+        stamCost: 22,
+        poiseDmg: 80,
+        color: '#fef08a',
+        slashColor: 'rgba(254, 240, 138, 0.95)',
+        unlocked: false,
+        source: 'Defeat Boss 10 (Primordial Ascendant)'
+      }
+    ];
+
+    let currentWeapon = WEAPONS[0];
+
+    /* ==========================================================================
+       BOSS ROSTER (10 UNIQUE BOSS ENCOUNTERS)
+       ========================================================================== */
+    const BOSS_ROSTER = [
+      {
+        id: 1,
+        name: 'Lord Malakor, The Iron Warden',
+        title: 'Lord Malakor',
+        hp: 1250,
+        radius: 40,
+        speed: 1.15,
+        color: '#b91c1c',
+        eyeColor: '#ef4444',
+        weaponDropId: 'w1',
+        attacks: ['cleave', 'slam', 'whirlwind', 'magma_fissure', 'iron_cannon'],
+        arena: {
+          locationName: 'The Smoldering Bastion',
+          floorColor: '#140a0a',
+          borderColor: '#7f1d1d',
+          gridColor: 'rgba(239, 68, 68, 0.22)',
+          ambientType: 'embers',
+          ambientColor: '#f97316',
+          pillarType: 'iron_furnace',
+          pillars: [
+            { x: -240, y: -170, r: 38, height: 95 },
+            { x: 240, y: -170, r: 38, height: 95 },
+            { x: -260, y: 170, r: 38, height: 95 },
+            { x: 260, y: 170, r: 38, height: 95 }
+          ]
+        }
+      },
+      {
+        id: 2,
+        name: 'Vaelith, The Shadow Dagger',
+        title: 'Vaelith',
+        hp: 1150,
+        radius: 28,
+        speed: 1.9,
+        color: '#581c87',
+        eyeColor: '#c084fc',
+        weaponDropId: 'w2',
+        attacks: ['shadow_teleport', 'kunai_fan', 'dash_flurry', 'shadow_pulse'],
+        arena: {
+          locationName: 'The Shrouded Mausoleum',
+          floorColor: '#0b0714',
+          borderColor: '#6b21a8',
+          gridColor: 'rgba(168, 85, 247, 0.22)',
+          ambientType: 'shadow_mist',
+          ambientColor: '#c084fc',
+          pillarType: 'obsidian_obelisk',
+          pillars: [
+            { x: -180, y: -140, r: 24, height: 85 },
+            { x: 180, y: -140, r: 24, height: 85 },
+            { x: -250, y: 0, r: 26, height: 90 },
+            { x: 250, y: 0, r: 26, height: 90 },
+            { x: -180, y: 140, r: 24, height: 85 },
+            { x: 180, y: 140, r: 24, height: 85 }
+          ]
+        }
+      },
+      {
+        id: 3,
+        name: 'Ignis, The Pyre Monarch',
+        title: 'Ignis',
+        hp: 1400,
+        radius: 36,
+        speed: 1.25,
+        color: '#c2410c',
+        eyeColor: '#f97316',
+        weaponDropId: 'w3',
+        hasWipe: true,
+        wipeName: 'Solar Supernova',
+        attacks: ['fireball_volley', 'summon_imps', 'solar_supernova'],
+        arena: {
+          locationName: 'Caldera of the Pyre Lord',
+          floorColor: '#1a0802',
+          borderColor: '#ea580c',
+          gridColor: 'rgba(249, 115, 22, 0.32)',
+          ambientType: 'fire_sparks',
+          ambientColor: '#f97316',
+          pillarType: 'magma_spire',
+          pillars: [
+            { x: -220, y: -150, r: 42, height: 110 },
+            { x: 220, y: -150, r: 42, height: 110 },
+            { x: -220, y: 150, r: 42, height: 110 },
+            { x: 220, y: 150, r: 42, height: 110 }
+          ]
+        }
+      },
+      {
+        id: 4,
+        name: 'Glacius, The Frost Colossus',
+        title: 'Glacius',
+        hp: 1850,
+        radius: 46,
+        speed: 0.85,
+        color: '#0369a1',
+        eyeColor: '#38bdf8',
+        weaponDropId: 'w4',
+        attacks: ['ice_boulder', 'stalagmite_spikes', 'glacial_stomp', 'frost_nova'],
+        arena: {
+          locationName: 'The Glacial Hollow',
+          floorColor: '#071520',
+          borderColor: '#0284c7',
+          gridColor: 'rgba(56, 189, 248, 0.25)',
+          ambientType: 'snow',
+          ambientColor: '#bae6fd',
+          pillarType: 'glacial_prism',
+          pillars: [
+            { x: 0, y: -220, r: 36, height: 105 },
+            { x: -250, y: -70, r: 34, height: 95 },
+            { x: 250, y: -70, r: 34, height: 95 },
+            { x: -170, y: 170, r: 35, height: 100 },
+            { x: 170, y: 170, r: 35, height: 100 }
+          ]
+        }
+      },
+      {
+        id: 5,
+        name: 'Sylvanas, The Twisted Thorn',
+        title: 'Sylvanas',
+        hp: 1450,
+        radius: 34,
+        speed: 1.4,
+        color: '#15803d',
+        eyeColor: '#4ade80',
+        weaponDropId: 'w5',
+        attacks: ['creeping_vines', 'spore_pods', 'bramble_whip', 'thorn_barrage'],
+        arena: {
+          locationName: 'The Blighted Arbor',
+          floorColor: '#061309',
+          borderColor: '#16a34a',
+          gridColor: 'rgba(34, 197, 94, 0.22)',
+          ambientType: 'spores',
+          ambientColor: '#4ade80',
+          pillarType: 'twisted_oak',
+          pillars: [
+            { x: -200, y: -180, r: 38, height: 95 },
+            { x: 200, y: -180, r: 38, height: 95 },
+            { x: -210, y: 140, r: 38, height: 95 },
+            { x: 210, y: 140, r: 38, height: 95 }
+          ]
+        }
+      },
+      {
+        id: 6,
+        name: 'Zephyr, The Storm Valkyrie',
+        title: 'Zephyr',
+        hp: 1550,
+        radius: 32,
+        speed: 1.75,
+        color: '#a16207',
+        eyeColor: '#fde047',
+        weaponDropId: 'w6',
+        attacks: ['thunder_dive', 'storm_cyclone', 'thunder_thrust', 'lightning_chain'],
+        arena: {
+          locationName: 'Tempest Peak Spire',
+          floorColor: '#12110a',
+          borderColor: '#ca8a04',
+          gridColor: 'rgba(250, 204, 21, 0.26)',
+          ambientType: 'lightning_sparks',
+          ambientColor: '#fef08a',
+          pillarType: 'lightning_pylon',
+          pillars: [
+            { x: -250, y: -160, r: 30, height: 115 },
+            { x: 250, y: -160, r: 30, height: 115 },
+            { x: -250, y: 160, r: 30, height: 115 },
+            { x: 250, y: 160, r: 30, height: 115 }
+          ]
+        }
+      },
+      {
+        id: 7,
+        name: 'Ouros, The Sand Sentinel',
+        title: 'Ouros',
+        hp: 1750,
+        radius: 42,
+        speed: 1.05,
+        color: '#78350f',
+        eyeColor: '#fbbf24',
+        weaponDropId: 'w7',
+        attacks: ['quicksand_vortex', 'boomerang_scythe', 'earth_tremor', 'sand_lance'],
+        arena: {
+          locationName: 'Dune of the Forgotten Sentinel',
+          floorColor: '#171109',
+          borderColor: '#b45309',
+          gridColor: 'rgba(245, 158, 11, 0.25)',
+          ambientType: 'sand',
+          ambientColor: '#f59e0b',
+          pillarType: 'sand_monument',
+          pillars: [
+            { x: -220, y: -130, r: 36, height: 95 },
+            { x: 220, y: -130, r: 36, height: 95 },
+            { x: -220, y: 130, r: 36, height: 95 },
+            { x: 220, y: 130, r: 36, height: 95 }
+          ]
+        }
+      },
+      {
+        id: 8,
+        name: 'Nyx, The Void Weaver',
+        title: 'Nyx',
+        hp: 1650,
+        radius: 30,
+        speed: 1.6,
+        color: '#4c1d95',
+        eyeColor: '#e879f9',
+        weaponDropId: 'w8',
+        attacks: ['void_rifts', 'orbiting_orbs', 'void_blink', 'void_lance'],
+        arena: {
+          locationName: 'The Void Horizon',
+          floorColor: '#05020c',
+          borderColor: '#7e22ce',
+          gridColor: 'rgba(192, 132, 252, 0.26)',
+          ambientType: 'stars',
+          ambientColor: '#e879f9',
+          pillarType: 'void_monolith',
+          pillars: [
+            { x: -190, y: -160, r: 32, height: 90 },
+            { x: 190, y: -160, r: 32, height: 90 },
+            { x: -190, y: 160, r: 32, height: 90 },
+            { x: 190, y: 160, r: 32, height: 90 }
+          ]
+        }
+      },
+      {
+        id: 9,
+        name: 'Gorgon, The Cursed Chimera',
+        title: 'Gorgon',
+        hp: 1950,
+        radius: 44,
+        speed: 1.5,
+        color: '#881337',
+        eyeColor: '#fb7185',
+        weaponDropId: 'w9',
+        attacks: ['flame_breath', 'pounce_combo', 'claw_frenzy', 'flame_trail'],
+        arena: {
+          locationName: 'Den of the Gorgon Beast',
+          floorColor: '#17050a',
+          borderColor: '#9f1239',
+          gridColor: 'rgba(244, 63, 94, 0.26)',
+          ambientType: 'blood_mist',
+          ambientColor: '#fb7185',
+          pillarType: 'bone_totem',
+          pillars: [
+            { x: -230, y: -150, r: 34, height: 92 },
+            { x: 230, y: -150, r: 34, height: 92 },
+            { x: -230, y: 150, r: 34, height: 92 },
+            { x: 230, y: 150, r: 34, height: 92 }
+          ]
+        }
+      },
+      {
+        id: 10,
+        name: 'The Primordial Ascendant',
+        title: 'Ascendant',
+        hp: 2600,
+        radius: 48,
+        speed: 1.45,
+        color: '#831843',
+        eyeColor: '#fef08a',
+        weaponDropId: 'w10',
+        hasWipe: true,
+        wipeName: 'Apocalyptic Cataclysm',
+        attacks: ['starfall_rain', 'apocalyptic_cataclysm', 'clone_mimic', 'celestial_orbs', 'spear_lance', 'gravity_wave'],
+        arena: {
+          locationName: 'Sanctum of the First Sovereign',
+          floorColor: '#0d0a06',
+          borderColor: '#eab308',
+          gridColor: 'rgba(254, 240, 138, 0.32)',
+          ambientType: 'divine_motes',
+          ambientColor: '#fef08a',
+          pillarType: 'divine_column',
+          pillars: [
+            { x: -250, y: -180, r: 40, height: 120 },
+            { x: 250, y: -180, r: 40, height: 120 },
+            { x: -250, y: 180, r: 40, height: 120 },
+            { x: 250, y: 180, r: 40, height: 120 }
+          ]
+        }
+      }
+    ];
+
+    let currentBossIndex = 0;
+
+    /* ==========================================================================
+       ISOMETRIC 2.5D PROJECTION SYSTEM
+       ========================================================================== */
+    const Y_SQUASH = 0.58;
+
+    function worldToScreen(wx, wy) {
+      return {
+        x: wx - camera.x + canvas.width / 2,
+        y: (wy - camera.y) * Y_SQUASH + canvas.height / 2
+      };
+    }
+
+    function screenToWorld(sx, sy) {
+      return {
+        wx: (sx - canvas.width / 2) + camera.x,
+        wy: (sy - canvas.height / 2) / Y_SQUASH + camera.y
+      };
+    }
+
+    const camera = {
+      x: 0,
+      y: 0,
+      targetX: 0,
+      targetY: 0,
+      update() {
+        this.targetX = player.x;
+        this.targetY = player.y;
+        this.x += (this.targetX - this.x) * 0.09;
+        this.y += (this.targetY - this.y) * 0.09;
+      }
+    };
+
+    /* ==========================================================================
+       SANCTUARY DS3 FIRELINK SHRINE PROPS & NPCS
+       ========================================================================== */
+    const sanctuaryProps = {
+      bonfire: {
+        x: 0,
+        y: 0,
+        r: 32,
+        label: 'Rest at Coiled Sword Bonfire (Restore HP/Estus)'
+      },
+      fogGate: {
+        x: 0,
+        y: -280,
+        r: 38,
+        label: 'Traverse Fog Gate (Enter Boss Arena)'
+      },
+      weaponRack: {
+        x: -180,
+        y: 60,
+        r: 28,
+        label: 'Weapon Arsenal (Inspect Relics)'
+      },
+      crestfallen: {
+        x: 180,
+        y: 70,
+        r: 28,
+        label: 'Talk to Silas the Weary',
+        name: 'Silas the Weary',
+        pitch: 210,
+        dialogues: [
+          "Ah, another lamb to the slaughter. Think you're a champion, do you?",
+          "Ten lords await across that fog. Ten! We're not fit to lick their boots.",
+          "Look at this place. Ash and ruin. Go on then, roll yourself into an early grave."
+        ],
+        dialogueIdx: 0
+      },
+      fireKeeper: {
+        x: -60,
+        y: -90,
+        r: 28,
+        label: 'Talk to Ember Maiden Elara',
+        name: 'Ember Maiden Elara',
+        pitch: 380,
+        dialogues: [
+          "Welcome to the bonfire, Ashen One. I tend to the flame, and to thee.",
+          "The Coiled Sword shall ever mend thy flesh and replenish thy Estus.",
+          "Slay each sovereign and bring their relics to the anvil. Prithee, return safe."
+        ],
+        dialogueIdx: 0
+      },
+      blacksmith: {
+        x: -240,
+        y: -40,
+        r: 30,
+        label: 'Talk to Forge-Master Thorne',
+        name: 'Forge-Master Thorne',
+        pitch: 170,
+        hammerTimer: 0,
+        dialogues: [
+          "Over here! Need your steel quenched? Don't go getting yourself killed now.",
+          "Every lord you best drops a soul-forged armament. Check your Arsenal with [TAB].",
+          "Time your Buckler Parry [R-CLICK / F] right before a strike to deflect the blow and stagger the enemy!"
+        ],
+        dialogueIdx: 0
+      }
+    };
+
+    const shrineRuins = [
+      { x: -140, y: -200, r: 24, height: 80, fallen: true, angle: -0.4 },
+      { x: 140, y: -200, r: 24, height: 75, fallen: true, angle: 0.35 },
+      { x: -280, y: 120, r: 28, height: 110, brokenTop: true },
+      { x: 280, y: 120, r: 28, height: 95, brokenTop: true },
+      { x: 130, y: -80, isGravestone: true, candles: 3 },
+      { x: 220, y: -30, isGravestone: true, candles: 4 },
+      { x: -150, y: 140, isGravestone: true, candles: 2 },
+      { x: 90, y: 160, isGravestone: true, candles: 3 },
+      { x: 0, y: -230, isSteps: true, width: 140, depth: 35 }
+    ];
+
+    /* ==========================================================================
+       CANVAS & GAME STATE
+       ========================================================================== */
+    const canvas = document.getElementById('arenaCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('game-container');
+
+    const hpBar = document.getElementById('player-hp-bar');
+    const hpTxt = document.getElementById('player-hp-txt');
+    const stamBar = document.getElementById('player-stam-bar');
+    const stamTxt = document.getElementById('player-stam-txt');
+    const bossHud = document.getElementById('boss-hud');
+    const bossNameElem = document.getElementById('boss-name');
+    const bossHpCount = document.getElementById('boss-hp-count');
+    const bossHpBar = document.getElementById('boss-hp-bar');
+    const bossPoiseBar = document.getElementById('boss-poise-bar');
+    const estusContainer = document.getElementById('estus-container');
+    const estusCountSpan = document.getElementById('estus-count');
+    const banner = document.getElementById('cinematic-banner');
+    const bannerTitle = document.getElementById('banner-title');
+    const bannerSubtitle = document.getElementById('banner-subtitle');
+    const bannerReward = document.getElementById('banner-reward');
+    const centerPrompt = document.getElementById('center-prompt');
+    const locationBadge = document.getElementById('location-badge');
+    const bossProgressTag = document.getElementById('boss-progress-tag');
+    const interactPrompt = document.getElementById('interact-prompt');
+    const interactActionText = document.getElementById('interact-action-text');
+
+    const dialogueBox = document.getElementById('dialogue-box');
+    const npcNameElem = document.getElementById('npc-name');
+    const npcTextElem = document.getElementById('npc-text');
+
+    const hudWeaponName = document.getElementById('hud-weapon-name');
+    const hudWeaponType = document.getElementById('hud-weapon-type');
+    const hudWeaponIcon = document.getElementById('hud-weapon-icon');
+    const arsenalModal = document.getElementById('arsenal-modal');
+    const arsenalGrid = document.getElementById('arsenal-grid');
+    const unlockedCount = document.getElementById('unlocked-count');
+    const closeArsenalBtn = document.getElementById('close-arsenal-btn');
+    const closeArsenalFooterBtn = document.getElementById('close-arsenal-footer-btn');
+    const arsenalBtn = document.getElementById('arsenal-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const muteBtn = document.getElementById('mute-btn');
+
+    let mouseScreen = { x: canvas.width / 2, y: canvas.height / 2 };
+    let keys = {};
+    let scene = 'sanctuary';
+    let gameState = 'playing';
+    let shakeTimer = 0;
+    let hitstopTimer = 0;
+    let particles = [];
+    let shockwaves = [];
+    let groundCracks = [];
+    let floatingTexts = [];
+    let activeInteractable = null;
+    let activeDialogueNpc = null;
+
+    let bossProjectiles = [];
+    let enemyMinions = [];
+    let groundHazards = [];
+    let activeWipeAttack = null;
+
+    const wipeWarning = document.getElementById('wipe-warning');
+    const wipeTimerBar = document.getElementById('wipe-timer-bar');
+    const wipeShelterStatus = document.getElementById('wipe-shelter-status');
+
+    const ARENA_RADIUS = 520;
+    const SANCTUARY_RADIUS = 400;
+
+    let currentArenaPillars = [];
+
+    /* ==========================================================================
+       PILLAR LINE-OF-SIGHT & SHELTER CHECK (Generous Cone + Raycast)
+       ========================================================================== */
+    function isBlockedByPillars(x1, y1, x2, y2) {
+      const distSourceToPlayer = Math.hypot(x2 - x1, y2 - y1);
+      for (const p of currentArenaPillars) {
+        const distSourceToPillar = Math.hypot(p.x - x1, p.y - y1);
+        if (distSourceToPlayer < distSourceToPillar - p.r * 0.35) continue;
+
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) continue;
+
+        const t = Math.max(0, Math.min(1, ((p.x - x1) * dx + (p.y - y1) * dy) / lenSq));
+        const projX = x1 + t * dx;
+        const projY = y1 + t * dy;
+        const distSq = (p.x - projX) * (p.x - projX) + (p.y - projY) * (p.y - projY);
+
+        const shelterRadius = p.r + player.radius * 0.9;
+        if (distSq <= shelterRadius * shelterRadius) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function spawnFloatingText(wx, wy, text, color = '#38bdf8') {
+      floatingTexts.push({
+        x: wx,
+        y: wy,
+        z: 36,
+        text,
+        color,
+        alpha: 1,
+        life: 48
+      });
+    }
+
+    /* ==========================================================================
+       KEYBOARD & MOUSE EVENT LISTENERS
+       ========================================================================== */
+    window.addEventListener('keydown', (e) => {
+      sound.init();
+      const k = e.key.toLowerCase();
+      keys[k] = true;
+
+      if (k === 'tab') {
+        e.preventDefault();
+        toggleArsenalModal();
+        return;
+      }
+
+      if (k === 'escape') {
+        if (!arsenalModal.classList.contains('hidden')) {
+          toggleArsenalModal(false);
+        }
+        if (!dialogueBox.classList.contains('hidden')) {
+          closeDialogue();
+        }
+      }
+
+      if (k === 'r') {
+        returnToSanctuary();
+      }
+
+      if (k === 'e' || k === ' ') {
+        if (!dialogueBox.classList.contains('hidden')) {
+          advanceDialogue();
+          return;
+        }
+
+        if (activeInteractable && scene === 'sanctuary') {
+          handleInteraction(activeInteractable);
+        } else if (k === 'e' && scene === 'arena' && gameState === 'playing') {
+          player.drinkEstus();
+        }
+      }
+
+      if (k === 'f' && scene === 'arena' && gameState === 'playing') {
+        player.triggerParry();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.key.toLowerCase()] = false;
+    });
+
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      sound.init();
+      if (scene === 'arena' && gameState === 'playing') {
+        player.triggerParry();
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      mouseScreen.x = (e.clientX - rect.left) * scaleX;
+      mouseScreen.y = (e.clientY - rect.top) * scaleY;
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+      sound.init();
+      if (!dialogueBox.classList.contains('hidden')) {
+        advanceDialogue();
+        return;
+      }
+      if (e.button === 0 && gameState === 'playing' && scene === 'arena') {
+        player.triggerAttack();
+      } else if (e.button === 2 && gameState === 'playing' && scene === 'arena') {
+        player.triggerParry();
+      }
+    });
+
+    arsenalBtn.addEventListener('click', () => {
+      sound.init();
+      toggleArsenalModal();
+    });
+
+    closeArsenalBtn.addEventListener('click', () => toggleArsenalModal(false));
+    closeArsenalFooterBtn.addEventListener('click', () => toggleArsenalModal(false));
+
+    restartBtn.addEventListener('click', () => {
+      sound.init();
+      returnToSanctuary();
+    });
+
+    muteBtn.addEventListener('click', () => {
+      sound.init();
+      sound.setMuted(!sound.muted);
+      muteBtn.textContent = sound.muted ? 'Audio: OFF' : 'Audio: ON';
+    });
+
+    function triggerScreenShake(duration = 14) {
+      shakeTimer = Math.max(shakeTimer, duration);
+    }
+
+    /* ==========================================================================
+       EFFECTS & PARTICLES (2.5D Elliptical Particles & Shockwaves)
+       ========================================================================== */
+    function spawnSparks(wx, wy, count = 12, color = '#f97316') {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 4.5 + 1.2;
+        particles.push({
+          x: wx,
+          y: wy,
+          z: Math.random() * 20 + 5,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          vz: Math.random() * 4 + 2,
+          size: Math.random() * 3 + 1.5,
+          color,
+          alpha: 1,
+          decay: Math.random() * 0.03 + 0.02
+        });
+      }
+    }
+
+    function spawnHealParticles(wx, wy) {
+      for (let i = 0; i < 22; i++) {
+        particles.push({
+          x: wx + (Math.random() * 32 - 16),
+          y: wy + (Math.random() * 32 - 16),
+          z: 2,
+          vx: (Math.random() - 0.5) * 0.6,
+          vy: (Math.random() - 0.5) * 0.6,
+          vz: Math.random() * 2.8 + 1.5,
+          size: Math.random() * 3.5 + 2,
+          color: '#fbbf24',
+          alpha: 1,
+          decay: 0.025
+        });
+      }
+    }
+
+    function createShockwave(wx, wy, maxRadius = 180, damage = 35, color = '#ef4444', respectsPillars = true) {
+      shockwaves.push({
+        x: wx,
+        y: wy,
+        radius: 12,
+        maxRadius,
+        speed: 7.2,
+        damage,
+        color,
+        respectsPillars,
+        hitPlayer: false,
+        alpha: 1
+      });
+    }
+
+    function createGroundCrack(wx, wy) {
+      groundCracks.push({
+        x: wx,
+        y: wy,
+        alpha: 1,
+        life: 240
+      });
+    }
+
+    /* ==========================================================================
+       PLAYER OBJECT (2.5D Champion of Ash)
+       ========================================================================== */
+    const player = {
+      x: 0,
+      y: 120,
+      radius: 18,
+      maxHp: 100,
+      hp: 100,
+      maxStam: 100,
+      stam: 100,
+      stamRegen: 0.85,
+      speed: 3.8,
+      estusCharges: 3,
+      maxEstus: 3,
+      isHealing: false,
+      healTimer: 0,
+      healDuration: 36,
+
+      isResting: false,
+      restTimer: 0,
+
+      // Dodge Roll & I-Frames
+      isRolling: false,
+      rollTimer: 0,
+      rollDuration: 22,
+      rollDir: { x: 0, y: 0 },
+      iFrameStart: 1,
+      iFrameEnd: 18,
+      rollGhost: [],
+      hitIFrameTimer: 0,
+
+      // Improved Parry System
+      isParrying: false,
+      parryTimer: 0,
+      parryWindowDuration: 20,
+      parryCooldown: 0,
+      parryAngle: 0,
+
+      // Attack Mechanics
+      isAttacking: false,
+      attackTimer: 0,
+      attackDuration: 20,
+      attackAngle: 0,
+      hasHitConnected: false,
+
+      facingAngle: 0,
+      walkCycle: 0,
+
+      drinkEstus() {
+        if (this.isHealing || this.isRolling || this.isAttacking || this.isParrying || this.isResting) return;
+        if (this.estusCharges > 0 && this.hp < this.maxHp) {
+          this.estusCharges--;
+          this.isHealing = true;
+          this.healTimer = this.healDuration;
+          renderEstusUI();
+          coop.sendAction("heal");
+        }
+      },
+
+      update() {
+        if (this.hitIFrameTimer > 0) {
+          this.hitIFrameTimer--;
+        }
+
+        if (this.isResting) {
+          this.restTimer--;
+          if (this.restTimer <= 0) this.isResting = false;
+          return;
+        }
+
+        if (this.isHealing) {
+          this.healTimer--;
+          if (this.healTimer === 15) {
+            this.hp = Math.min(this.maxHp, this.hp + 65);
+            sound.playHeal();
+            spawnHealParticles(this.x, this.y);
+          }
+          if (this.healTimer <= 0) this.isHealing = false;
+          return;
+        }
+
+        const mWorld = screenToWorld(mouseScreen.x, mouseScreen.y);
+        this.facingAngle = Math.atan2(mWorld.wy - this.y, mWorld.wx - this.x);
+
+        // Parry Cooldown & Active Window
+        if (this.parryCooldown > 0) this.parryCooldown--;
+        if (this.isParrying) {
+          this.parryTimer--;
+          let pdx = 0, pdy = 0;
+          if (keys['w'] || keys['arrowup']) pdy -= 1;
+          if (keys['s'] || keys['arrowdown']) pdy += 1;
+          if (keys['a'] || keys['arrowleft']) pdx -= 1;
+          if (keys['d'] || keys['arrowright']) pdx += 1;
+          if (pdx !== 0 || pdy !== 0) {
+            const plen = Math.hypot(pdx, pdy);
+            this.x += (pdx / plen) * (this.speed * 0.35);
+            this.y += (pdy / plen) * (this.speed * 0.35);
+          }
+          if (this.parryTimer <= 0) this.isParrying = false;
+        }
+
+        // Stamina Recovery
+        if (!this.isRolling && !this.isAttacking && !this.isParrying && this.stam < this.maxStam) {
+          this.stam = Math.min(this.maxStam, this.stam + this.stamRegen);
+        }
+
+        // Movement / Roll Execution
+        if (this.isRolling) {
+          this.rollTimer--;
+          this.x += this.rollDir.x * (this.speed * 1.85);
+          this.y += this.rollDir.y * (this.speed * 1.85);
+
+          if (this.rollTimer % 3 === 0) {
+            this.rollGhost.push({ x: this.x, y: this.y, alpha: 0.7 });
+          }
+
+          if (this.rollTimer <= 0) this.isRolling = false;
+        } else if (this.isAttacking) {
+          this.attackTimer--;
+          const hitFrame = Math.floor(this.attackDuration * 0.5);
+          if (this.attackTimer === hitFrame && !this.hasHitConnected) {
+            this.checkAttackHit();
+          }
+          if (this.attackTimer <= 0) this.isAttacking = false;
+        } else if (!this.isParrying) {
+          let dx = 0;
+          let dy = 0;
+          if (keys['w'] || keys['arrowup']) dy -= 1;
+          if (keys['s'] || keys['arrowdown']) dy += 1;
+          if (keys['a'] || keys['arrowleft']) dx -= 1;
+          if (keys['d'] || keys['arrowright']) dx += 1;
+
+          if (dx !== 0 || dy !== 0) {
+            const len = Math.hypot(dx, dy);
+            this.x += (dx / len) * this.speed;
+            this.y += (dy / len) * this.speed;
+            this.walkCycle += 0.22;
+          }
+
+          if (keys[' '] && (!activeInteractable || scene === 'arena') && this.stam >= 24) {
+            this.isRolling = true;
+            this.rollTimer = this.rollDuration;
+            this.stam -= 24;
+            sound.playDodgeRoll();
+
+            if (dx !== 0 || dy !== 0) {
+              const len = Math.hypot(dx, dy);
+              this.rollDir = { x: dx / len, y: dy / len };
+            } else {
+              this.rollDir = { x: Math.cos(this.facingAngle), y: Math.sin(this.facingAngle) };
+            }
+          }
+        }
+
+        // Clamp to Bounds & Pillar Collisions
+        if (scene === 'arena') {
+          currentArenaPillars.forEach(p => {
+            const d = Math.hypot(this.x - p.x, this.y - p.y);
+            const minDist = this.radius + p.r;
+            if (d < minDist && d > 0) {
+              const nx = (this.x - p.x) / d;
+              const ny = (this.y - p.y) / d;
+              this.x = p.x + nx * minDist;
+              this.y = p.y + ny * minDist;
+            }
+          });
+
+          const distFromCenter = Math.hypot(this.x, this.y);
+          if (distFromCenter > ARENA_RADIUS - this.radius) {
+            const angle = Math.atan2(this.y, this.x);
+            this.x = Math.cos(angle) * (ARENA_RADIUS - this.radius);
+            this.y = Math.sin(angle) * (ARENA_RADIUS - this.radius);
+          }
+        } else {
+          const distFromCenter = Math.hypot(this.x, this.y);
+          if (distFromCenter > SANCTUARY_RADIUS - this.radius) {
+            const angle = Math.atan2(this.y, this.x);
+            this.x = Math.cos(angle) * (SANCTUARY_RADIUS - this.radius);
+            this.y = Math.sin(angle) * (SANCTUARY_RADIUS - this.radius);
+          }
+        }
+
+        // Update Ghost Trails
+        for (let i = this.rollGhost.length - 1; i >= 0; i--) {
+          this.rollGhost[i].alpha -= 0.06;
+          if (this.rollGhost[i].alpha <= 0) this.rollGhost.splice(i, 1);
+        }
+      },
+
+      triggerAttack() {
+        if (this.isRolling || this.isAttacking || this.isHealing || this.isParrying || this.isResting) return;
+        if (this.stam < currentWeapon.stamCost) {
+          stamBar.parentElement.classList.add('shake');
+          setTimeout(() => stamBar.parentElement.classList.remove('shake'), 200);
+          return;
+        }
+
+        this.isAttacking = true;
+        this.attackDuration = currentWeapon.attackDuration;
+        this.attackTimer = this.attackDuration;
+        const mWorld = screenToWorld(mouseScreen.x, mouseScreen.y);
+        this.attackAngle = Math.atan2(mWorld.wy - this.y, mWorld.wx - this.x);
+        this.stam -= currentWeapon.stamCost;
+        this.hasHitConnected = false;
+
+        if (currentWeapon.id === 'w8') {
+          this.x += Math.cos(this.attackAngle) * 35;
+          this.y += Math.sin(this.attackAngle) * 35;
+          spawnSparks(this.x, this.y, 8, '#c084fc');
+        }
+
+        sound.playSwordSwing(currentWeapon.reach > 90 ? 320 : 540);
+        coop.sendAction("attack");
+      },
+
+      triggerParry() {
+        if (this.isRolling || this.isHealing || this.isParrying || this.isResting || this.parryCooldown > 0) return;
+        if (this.stam < 14) {
+          stamBar.parentElement.classList.add('shake');
+          setTimeout(() => stamBar.parentElement.classList.remove('shake'), 200);
+          return;
+        }
+
+        this.isAttacking = false;
+        this.isParrying = true;
+        this.parryTimer = this.parryWindowDuration;
+        this.parryCooldown = 28;
+        this.parryAngle = this.facingAngle;
+        this.stam -= 14;
+        sound.playParryWhoosh();
+        coop.sendAction("parry");
+      },
+
+      onSuccessfulParry(sourceType = 'boss') {
+        this.isParrying = false;
+        this.parryCooldown = 8;
+        this.hitIFrameTimer = 42;
+        this.stam = Math.min(this.maxStam, this.stam + 38);
+
+        sound.playParryDing();
+        triggerScreenShake(24);
+        hitstopTimer = 7;
+
+        spawnSparks(this.x + Math.cos(this.facingAngle) * 20, this.y + Math.sin(this.facingAngle) * 20, 36, '#38bdf8');
+        spawnSparks(this.x + Math.cos(this.facingAngle) * 20, this.y + Math.sin(this.facingAngle) * 20, 24, '#facc15');
+        createShockwave(this.x, this.y, 130, 0, '#38bdf8', false);
+
+        if (sourceType === 'boss' && scene === 'arena') {
+          spawnFloatingText(this.x, this.y, 'PARRIED!', '#4ade80');
+          boss.takeDamage(20, 88);
+          coop.sendCombat("boss_hit", { damage: 20, poiseDamage: 88 });
+          if (boss.state !== 'staggered' && boss.state !== 'wipe_charging') {
+            boss.state = 'cooldown';
+            boss.timer = 48;
+          }
+        } else if (sourceType === 'projectile') {
+          spawnFloatingText(this.x, this.y, 'SPELL DEFLECTED!', '#38bdf8');
+        } else if (sourceType === 'minion') {
+          spawnFloatingText(this.x, this.y, 'PARRIED!', '#4ade80');
+        }
+      },
+
+      checkAttackHit() {
+        const dist = Math.hypot(boss.x - this.x, boss.y - this.y);
+        if (dist <= currentWeapon.reach + boss.radius) {
+          const angleToBoss = Math.atan2(boss.y - this.y, boss.x - this.x);
+          let diff = Math.abs(angleToBoss - this.attackAngle);
+          while (diff > Math.PI) diff -= Math.PI * 2;
+
+          if (Math.abs(diff) < Math.PI / 1.7) {
+            let dmg = currentWeapon.damage;
+            let poiseDmg = currentWeapon.poiseDmg;
+
+            if (boss.state === 'staggered') {
+              dmg = Math.round(currentWeapon.damage * 2.8);
+              poiseDmg = 0;
+              triggerScreenShake(26);
+              spawnSparks(boss.x, boss.y, 35, '#fbbf24');
+              spawnFloatingText(boss.x, boss.y, `CRITICAL RIPOSTE! -${dmg}`, '#facc15');
+              sound.playHit();
+              sound.playStaggerBreak();
+
+              // Knock boss back away from the player and transition into recovery!
+              const kbAngle = Math.atan2(boss.y - this.y, boss.x - this.x);
+              boss.knockbackVx = Math.cos(kbAngle) * 18;
+              boss.knockbackVy = Math.sin(kbAngle) * 18;
+
+              boss.state = 'cooldown';
+              boss.timer = 45;
+              boss.poise = 0;
+              centerPrompt.classList.add('hidden');
+            } else {
+              triggerScreenShake(7);
+              spawnSparks(boss.x, boss.y, 14, currentWeapon.color);
+              sound.playHit();
+            }
+
+            if (currentWeapon.id === 'w9') {
+              this.hp = Math.min(this.maxHp, this.hp + 4);
+            }
+
+            if (currentWeapon.id === 'w4') {
+              createGroundCrack(boss.x, boss.y);
+              createShockwave(this.x, this.y, 70, 0, '#38bdf8', false);
+            }
+
+            boss.takeDamage(dmg, poiseDmg);
+            coop.sendCombat("boss_hit", { damage: dmg, poiseDamage: poiseDmg });
+            this.hasHitConnected = true;
+          }
+        }
+
+        // Check against minions
+        for (let i = enemyMinions.length - 1; i >= 0; i--) {
+          const m = enemyMinions[i];
+          const dm = Math.hypot(m.x - this.x, m.y - this.y);
+          if (dm <= currentWeapon.reach + m.r) {
+            m.hp -= currentWeapon.damage;
+            coop.sendCombat("minion_hit", { index: i, damage: currentWeapon.damage });
+            spawnSparks(m.x, m.y, 8, '#fbbf24');
+            sound.playHit();
+            if (m.hp <= 0) {
+              spawnSparks(m.x, m.y, 16, m.color);
+              this.stam = Math.min(this.maxStam, this.stam + 18);
+              enemyMinions.splice(i, 1);
+            }
+          }
+        }
+      },
+
+      hasIFrames() {
+        return (this.isRolling && (this.rollTimer <= this.iFrameEnd && this.rollTimer >= this.iFrameStart)) || this.hitIFrameTimer > 0;
+      },
+
+      takeDamage(amount, parriable = true, sourceType = 'boss') {
+        if (gameState !== 'playing') return false;
+
+        // Check Active Parry Window first!
+        if (parriable && this.isParrying) {
+          this.onSuccessfulParry(sourceType);
+          return false;
+        }
+
+        if (this.hasIFrames()) return false;
+
+        const scaledAmount = amount * getCoopEnemyDamageMultiplier();
+        this.hp = Math.max(0, this.hp - scaledAmount);
+        triggerScreenShake(14);
+        spawnSparks(this.x, this.y, 18, '#dc2626');
+        sound.playHit();
+        this.hitIFrameTimer = 45;
+
+        if (this.hp <= 0) endGame(false);
+        return true;
+      },
+
+      /* Detailed Procedural Weapon Rendering */
+      drawWeapon(angle) {
+        const wid = currentWeapon.id;
+        const cosA = Math.cos(angle);
+        const sinA = Math.sin(angle);
+
+        ctx.save();
+        ctx.shadowColor = currentWeapon.color;
+        ctx.shadowBlur = this.isAttacking ? 12 : 4;
+
+        if (wid === 'w0') {
+          ctx.fillStyle = '#d97706';
+          ctx.beginPath();
+          ctx.arc(-cosA * 4, -sinA * 4 * Y_SQUASH, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#451a03';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(-cosA * 3, -sinA * 3 * Y_SQUASH);
+          ctx.lineTo(cosA * 4, sinA * 4 * Y_SQUASH);
+          ctx.stroke();
+          ctx.strokeStyle = '#cbd5e1';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(-sinA * 7 + cosA * 4, cosA * 7 * Y_SQUASH + sinA * 4 * Y_SQUASH);
+          ctx.lineTo(sinA * 7 + cosA * 4, -cosA * 7 * Y_SQUASH + sinA * 4 * Y_SQUASH);
+          ctx.stroke();
+          ctx.strokeStyle = '#f8fafc';
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.moveTo(cosA * 5, sinA * 5 * Y_SQUASH);
+          ctx.lineTo(cosA * 42, sinA * 42 * Y_SQUASH);
+          ctx.stroke();
+          ctx.strokeStyle = '#64748b';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(cosA * 7, sinA * 7 * Y_SQUASH);
+          ctx.lineTo(cosA * 32, sinA * 32 * Y_SQUASH);
+          ctx.stroke();
+
+        } else if (wid === 'w1') {
+          ctx.strokeStyle = '#292524';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(-cosA * 6, -sinA * 6 * Y_SQUASH);
+          ctx.lineTo(cosA * 6, sinA * 6 * Y_SQUASH);
+          ctx.stroke();
+          ctx.strokeStyle = '#7f1d1d';
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.moveTo(-sinA * 10 + cosA * 6, cosA * 10 * Y_SQUASH + sinA * 6 * Y_SQUASH);
+          ctx.lineTo(sinA * 10 + cosA * 6, -cosA * 10 * Y_SQUASH + sinA * 6 * Y_SQUASH);
+          ctx.stroke();
+          ctx.strokeStyle = '#1c1917';
+          ctx.lineWidth = 7.5;
+          ctx.beginPath();
+          ctx.moveTo(cosA * 7, sinA * 7 * Y_SQUASH);
+          ctx.lineTo(cosA * 58, sinA * 58 * Y_SQUASH);
+          ctx.stroke();
+          ctx.strokeStyle = '#f87171';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(cosA * 9, sinA * 9 * Y_SQUASH);
+          ctx.lineTo(cosA * 56, sinA * 56 * Y_SQUASH);
+          ctx.stroke();
+
+        } else if (wid === 'w2') {
+          [-0.32, 0.32].forEach(offset => {
+            const da = angle + offset;
+            const ca = Math.cos(da);
+            const sa = Math.sin(da);
+            ctx.fillStyle = '#581c87';
+            ctx.beginPath();
+            ctx.arc(-ca * 2, -sa * 2 * Y_SQUASH, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#c084fc';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(ca * 3, sa * 3 * Y_SQUASH);
+            ctx.lineTo(ca * 28, sa * 28 * Y_SQUASH);
+            ctx.stroke();
+          });
+
+        } else if (wid === 'w3') {
+          ctx.strokeStyle = '#78350f';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(-cosA * 12, -sinA * 12 * Y_SQUASH);
+          ctx.lineTo(cosA * 50, sinA * 50 * Y_SQUASH);
+          ctx.stroke();
+          ctx.strokeStyle = '#ea580c';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(cosA * 42 - sinA * 6, sinA * 42 * Y_SQUASH + cosA * 6 * Y_SQUASH);
+          ctx.lineTo(cosA * 48 + sinA * 4, sinA * 48 * Y_SQUASH - cosA * 4 * Y_SQUASH);
+          ctx.stroke();
+          ctx.fillStyle = '#f97316';
+          ctx.beginPath();
+          ctx.arc(cosA * 54, sinA * 54 * Y_SQUASH, 4.5, 0, Math.PI * 2);
+          ctx.fill();
+
+        } else if (wid === 'w4') {
+          ctx.strokeStyle = '#475569';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(-cosA * 8, -sinA * 8 * Y_SQUASH);
+          ctx.lineTo(cosA * 44, sinA * 44 * Y_SQUASH);
+          ctx.stroke();
+          ctx.fillStyle = '#38bdf8';
+          ctx.shadowColor = '#38bdf8';
+          ctx.shadowBlur = 8;
+          ctx.fillRect(cosA * 44 - 7, sinA * 44 * Y_SQUASH - 7, 14, 14);
+          ctx.shadowBlur = 0;
+
+        } else if (wid === 'w5') {
+          ctx.strokeStyle = '#22c55e';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          for (let seg = 1; seg <= 5; seg++) {
+            const wave = Math.sin(Date.now() * 0.015 + seg) * 5;
+            ctx.lineTo(cosA * (seg * 11) - sinA * wave, sinA * (seg * 11) * Y_SQUASH + cosA * wave * Y_SQUASH);
+          }
+          ctx.stroke();
+
+        } else if (wid === 'w6') {
+          ctx.strokeStyle = '#ca8a04';
+          ctx.lineWidth = 2.8;
+          ctx.beginPath();
+          ctx.moveTo(-cosA * 10, -sinA * 10 * Y_SQUASH);
+          ctx.lineTo(cosA * 55, sinA * 55 * Y_SQUASH);
+          ctx.stroke();
+          ctx.strokeStyle = '#fde047';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(cosA * 45 - sinA * 6, sinA * 45 * Y_SQUASH + cosA * 6 * Y_SQUASH);
+          ctx.lineTo(cosA * 45 + sinA * 6, sinA * 45 * Y_SQUASH - cosA * 6 * Y_SQUASH);
+          ctx.stroke();
+
+        } else if (wid === 'w7') {
+          ctx.strokeStyle = '#78350f';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(-cosA * 8, -sinA * 8 * Y_SQUASH);
+          ctx.lineTo(cosA * 46, sinA * 46 * Y_SQUASH);
+          ctx.stroke();
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.arc(cosA * 46, sinA * 46 * Y_SQUASH, 16, angle, angle + Math.PI * 0.85);
+          ctx.stroke();
+
+        } else if (wid === 'w8') {
+          ctx.fillStyle = '#4c1d95';
+          ctx.beginPath();
+          ctx.arc(cosA * 5, sinA * 5 * Y_SQUASH, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#c084fc';
+          ctx.lineWidth = 2.8;
+          ctx.beginPath();
+          ctx.moveTo(cosA * 6, sinA * 6 * Y_SQUASH);
+          ctx.quadraticCurveTo(cosA * 24 - sinA * 3, sinA * 24 * Y_SQUASH + cosA * 3 * Y_SQUASH, cosA * 46, sinA * 46 * Y_SQUASH);
+          ctx.stroke();
+
+        } else if (wid === 'w9') {
+          [-4, 0, 4].forEach(off => {
+            ctx.strokeStyle = '#fb7185';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cosA * 4 - sinA * off, sinA * 4 * Y_SQUASH + cosA * off * Y_SQUASH);
+            ctx.lineTo(cosA * 24 - sinA * (off * 1.5), sinA * 24 * Y_SQUASH + cosA * (off * 1.5) * Y_SQUASH);
+            ctx.stroke();
+          });
+
+        } else if (wid === 'w10') {
+          ctx.strokeStyle = '#fef08a';
+          ctx.shadowColor = '#facc15';
+          ctx.shadowBlur = 10;
+          ctx.lineWidth = 6;
+          ctx.beginPath();
+          ctx.moveTo(cosA * 6, sinA * 6 * Y_SQUASH);
+          ctx.lineTo(cosA * 60, sinA * 60 * Y_SQUASH);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(cosA * 6, sinA * 6 * Y_SQUASH, 7, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      },
+
+      draw() {
+        ctx.save();
+        if (this.hitIFrameTimer > 0 && Math.floor(Date.now() / 80) % 2 === 0) {
+          ctx.globalAlpha = 0.45;
+        }
+
+        const scr = worldToScreen(this.x, this.y);
+
+        this.rollGhost.forEach(g => {
+          const gScr = worldToScreen(g.x, g.y);
+          ctx.save();
+          ctx.translate(gScr.x, gScr.y);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, this.radius * 1.1, this.radius * Y_SQUASH * 1.1, 0, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(96, 165, 250, ${g.alpha * 0.4})`;
+          ctx.fill();
+          ctx.restore();
+        });
+
+        ctx.save();
+        ctx.translate(scr.x, scr.y);
+
+        // Ground Shadow
+        ctx.beginPath();
+        ctx.ellipse(0, 2, this.radius * 1.05, this.radius * Y_SQUASH * 0.85, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        ctx.fill();
+
+        if (this.isResting) {
+          ctx.beginPath();
+          ctx.ellipse(0, -10, 10, 8, 0, 0, Math.PI * 2);
+          ctx.fillStyle = '#475569';
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.ellipse(0, -6, 22, 22 * Y_SQUASH, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.restore();
+          ctx.restore();
+          return;
+        }
+
+        if (this.isHealing) {
+          ctx.beginPath();
+          ctx.ellipse(0, 0, this.radius * 1.6, this.radius * Y_SQUASH * 1.6, 0, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(245, 158, 11, 0.28)';
+          ctx.fill();
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        // Enhanced Directional Buckler Parry Shield & Sweep Arc
+        if (this.isParrying) {
+          const progress = 1 - (this.parryTimer / this.parryWindowDuration);
+          const sweepAngle = this.facingAngle - 0.6 + progress * 1.2;
+
+          ctx.beginPath();
+          ctx.ellipse(0, -14, 28, 28 * Y_SQUASH, 0, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.18)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(125, 211, 252, 0.75)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.ellipse(0, -14, 34, 34 * Y_SQUASH, this.facingAngle, -Math.PI * 0.45, Math.PI * 0.45);
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 4.5;
+          ctx.shadowColor = '#38bdf8';
+          ctx.shadowBlur = 14;
+          ctx.stroke();
+
+          const bx = Math.cos(sweepAngle) * 18;
+          const by = Math.sin(sweepAngle) * 18 * Y_SQUASH - 16;
+          ctx.beginPath();
+          ctx.arc(bx, by, 7, 0, Math.PI * 2);
+          ctx.fillStyle = '#e0f2fe';
+          ctx.fill();
+          ctx.strokeStyle = '#0284c7';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
+
+        let zOffset = 0;
+        if (this.isRolling) {
+          zOffset = Math.sin((this.rollTimer / this.rollDuration) * Math.PI) * 14;
+        }
+
+        const oppAngle = this.facingAngle + Math.PI;
+        const capeLength = 18;
+        const capeX = Math.cos(oppAngle) * capeLength;
+        const capeY = Math.sin(oppAngle) * capeLength * Y_SQUASH;
+
+        ctx.beginPath();
+        ctx.moveTo(-4, -18 - zOffset);
+        ctx.lineTo(4, -18 - zOffset);
+        ctx.lineTo(capeX, capeY - 4 - zOffset);
+        ctx.closePath();
+        const capeGradient = ctx.createLinearGradient(0, -18 - zOffset, capeX, capeY - zOffset);
+        capeGradient.addColorStop(0, '#334155');
+        capeGradient.addColorStop(0.55, '#1e293b');
+        capeGradient.addColorStop(1, '#09090b');
+        ctx.fillStyle = capeGradient;
+        ctx.fill();
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        const legBob = Math.sin(this.walkCycle) * 2;
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.ellipse(-6, -2 - zOffset, 5, 8, -0.15, 0, Math.PI * 2);
+        ctx.ellipse(6, -2 - zOffset, 5, 8, 0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.ellipse(0, -16 - zOffset + legBob, 11, 15, 0, 0, Math.PI * 2);
+        const armorGradient = ctx.createLinearGradient(0, -31 - zOffset, 0, -2 - zOffset);
+        armorGradient.addColorStop(0, this.isParrying ? '#bae6fd' : '#94a3b8');
+        armorGradient.addColorStop(0.35, this.isParrying ? '#38bdf8' : (this.hasIFrames() ? '#bfdbfe' : '#64748b'));
+        armorGradient.addColorStop(1, '#1e293b');
+        ctx.fillStyle = armorGradient;
+        ctx.fill();
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = this.isParrying ? '#7dd3fc' : '#475569';
+        ctx.beginPath();
+        ctx.ellipse(-10, -20 - zOffset + legBob, 5, 8, -0.35, 0, Math.PI * 2);
+        ctx.ellipse(10, -20 - zOffset + legBob, 5, 8, 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0f172a';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, -32 - zOffset + legBob, 7.5, 0, Math.PI * 2);
+        const helmetGradient = ctx.createRadialGradient(-2, -35 - zOffset, 1, 0, -32 - zOffset, 9);
+        helmetGradient.addColorStop(0, this.hasIFrames() ? '#dbeafe' : '#cbd5e1');
+        helmetGradient.addColorStop(1, '#475569');
+        ctx.fillStyle = helmetGradient;
+        ctx.fill();
+        ctx.stroke();
+
+        const visorX = Math.cos(this.facingAngle) * 4;
+        const visorY = Math.sin(this.facingAngle) * 3;
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(visorX - 2.5, -33 - zOffset + visorY, 5, 2.5);
+
+        ctx.save();
+        ctx.translate(0, -14 - zOffset);
+        this.drawWeapon(this.facingAngle);
+
+        if (this.isAttacking) {
+          ctx.beginPath();
+          ctx.ellipse(0, 0, currentWeapon.reach, currentWeapon.reach * Y_SQUASH, this.attackAngle, -Math.PI / 3, Math.PI / 3);
+          ctx.strokeStyle = currentWeapon.slashColor;
+          ctx.lineWidth = currentWeapon.reach > 90 ? 10 : 7;
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.ellipse(0, 0, currentWeapon.reach * 0.86, currentWeapon.reach * Y_SQUASH * 0.86, this.attackAngle, -Math.PI / 3, Math.PI / 3);
+          ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        ctx.restore();
+        ctx.restore();
+        ctx.restore();
+      }
+    };
+
+    /* ==========================================================================
+       DYNAMIC BOSS OBJECT (Adapts to Active Encounter in Boss Rush)
+       ========================================================================== */
+    function getAttackInfo(type) {
+      const attacks = {
+        cleave: ['CLEAVE', '#ef4444', 'MELEE'],
+        slam: ['Slam', '#ef4444', 'MELEE'],
+        whirlwind: ['WHIRLWIND', '#f97316', 'SPIN'],
+        magma_fissure: ['Magma Fissure', '#f97316', 'GROUND'],
+        iron_cannon: ['Iron Cannon', '#ef4444', 'PROJECTILE'],
+        shadow_teleport: ['Shadow Teleport', '#c084fc', 'DASH'],
+        shadow_pulse: ['Shadow Pulse', '#c084fc', 'PROJECTILE'],
+        kunai_fan: ['Kunai Fan', '#c084fc', 'PROJECTILE'],
+        dash_flurry: ['Dash Flurry', '#c084fc', 'DASH'],
+        fireball_volley: ['Fireball Volley', '#f97316', 'PROJECTILE'],
+        summon_imps: ['Summon Imps', '#ea580c', 'SUMMON'],
+        solar_supernova: ['Solar Supernova', '#fef08a', 'WIPE'],
+        ice_boulder: ['Ice Boulder', '#38bdf8', 'PROJECTILE'],
+        stalagmite_spikes: ['Stalagmite Line', '#38bdf8', 'GROUND'],
+        glacial_stomp: ['Glacial Stomp', '#38bdf8', 'GROUND'],
+        frost_nova: ['Frost Nova', '#bae6fd', 'AREA'],
+        creeping_vines: ['Creeping Vines', '#4ade80', 'SUMMON'],
+        spore_pods: ['Spore Pods', '#4ade80', 'PROJECTILE'],
+        bramble_whip: ['Bramble Whip', '#22c55e', 'MELEE'],
+        thorn_barrage: ['Thorn Barrage', '#22c55e', 'PROJECTILE'],
+        thunder_dive: ['Thunder Dive', '#fde047', 'DASH'],
+        thunder_thrust: ['Thunder Thrust', '#fde047', 'MELEE'],
+        lightning_chain: ['Lightning Chain', '#facc15', 'PROJECTILE'],
+        storm_cyclone: ['Storm Cyclone', '#facc15', 'PROJECTILE'],
+        quicksand_vortex: ['Quicksand Vortex', '#d97706', 'AREA'],
+        boomerang_scythe: ['Boomerang Scythe', '#fbbf24', 'PROJECTILE'],
+        earth_tremor: ['Earth Tremor', '#f59e0b', 'GROUND'],
+        sand_lance: ['Sand Lance', '#fbbf24', 'PROJECTILE'],
+        void_rifts: ['Void Rifts', '#c084fc', 'GROUND'],
+        void_lance: ['Void Lance', '#c084fc', 'PROJECTILE'],
+        void_blink: ['Void Blink', '#c084fc', 'DASH'],
+        orbiting_orbs: ['Orbiting Orbs', '#e879f9', 'AREA'],
+        flame_breath: ['Flame Breath', '#fb7185', 'CONE'],
+        pounce_combo: ['Pounce Combo', '#fb7185', 'DASH'],
+        claw_frenzy: ['Claw Frenzy', '#fb7185', 'MELEE'],
+        flame_trail: ['Flame Trail', '#f97316', 'GROUND'],
+        starfall_rain: ['Starfall Rain', '#fef08a', 'GROUND'],
+        apocalyptic_cataclysm: ['Apocalyptic Cataclysm', '#ef4444', 'WIPE'],
+        clone_mimic: ['Clone Mimic', '#c084fc', 'SUMMON'],
+        celestial_orbs: ['Celestial Orbs', '#fef08a', 'PROJECTILE'],
+        spear_lance: ['Spear Lance', '#fef08a', 'PROJECTILE'],
+        gravity_wave: ['Gravity Wave', '#c084fc', 'GROUND']
+      };
+      return attacks[type] || ['Attack', '#ef4444', 'MELEE'];
+    }
+
+    const boss = {
+      x: 0,
+      y: -180,
+      radius: 40,
+      height: 70,
+      maxHp: 1250,
+      hp: 1250,
+      maxPoise: 140,
+      poise: 0,
+      phase: 1,
+      state: 'idle',
+      timer: 70,
+      targetPos: { x: 0, y: 0 },
+      currentAttackType: 'slam',
+      facingAngle: Math.PI / 2,
+      profile: BOSS_ROSTER[0],
+
+      spinAngle: 0,
+      pounceHitsRemaining: 0,
+      flamethrowerTimer: 0,
+      orbitingOrbs: [],
+      knockbackVx: 0,
+      knockbackVy: 0,
+
+      loadBoss(index) {
+        this.profile = BOSS_ROSTER[index];
+        this.maxHp = Math.round(this.profile.hp * 2 * getCoopBossHpMultiplier());
+        this.hp = this.maxHp;
+        this.radius = this.profile.radius;
+        this.maxPoise = Math.round((140 + index * 15) * 1.5);
+        this.poise = 0;
+        this.phase = 1;
+        this.state = 'idle';
+        this.timer = 70;
+        this.x = 0;
+        this.y = -180;
+        this.spinAngle = 0;
+        this.orbitingOrbs = [];
+        this.knockbackVx = 0;
+        this.knockbackVy = 0;
+
+        currentArenaPillars = this.profile.arena ? this.profile.arena.pillars : [];
+
+        bossProjectiles = [];
+        enemyMinions = [];
+        groundHazards = [];
+        activeWipeAttack = null;
+        wipeWarning.classList.add('hidden');
+
+        if (this.profile.id === 8 || this.profile.id === 10) {
+          for (let i = 0; i < 4; i++) {
+            this.orbitingOrbs.push({ angle: (i * Math.PI) / 2, dist: 65, r: 8 });
+          }
+        }
+
+        bossNameElem.textContent = this.profile.name;
+        bossHpCount.textContent = `${this.hp} / ${this.maxHp}`;
+        bossHpBar.style.width = '100%';
+        bossPoiseBar.style.width = '0%';
+      },
+
+      update() {
+        if (scene !== 'arena') return;
+
+        // Apply Riposte Knockback velocity & smooth friction decay
+        if (Math.abs(this.knockbackVx) > 0.1 || Math.abs(this.knockbackVy) > 0.1) {
+          this.x += this.knockbackVx;
+          this.y += this.knockbackVy;
+          this.knockbackVx *= 0.82;
+          this.knockbackVy *= 0.82;
+        } else {
+          this.knockbackVx = 0;
+          this.knockbackVy = 0;
+        }
+
+        if (this.phase === 1 && this.hp <= this.maxHp * 0.5) {
+          this.phase = 2;
+          triggerScreenShake(26);
+          sound.playSlam();
+          spawnSparks(this.x, this.y, 45, this.profile.eyeColor);
+        }
+
+        this.facingAngle = Math.atan2(player.y - this.y, player.x - this.x);
+        this.timer--;
+
+        // Orbiting Orbs (Nyx & Primordial Ascendant) — UNPARRIABLE (parriable = false)
+        this.orbitingOrbs.forEach(orb => {
+          orb.angle += 0.05;
+          const ox = this.x + Math.cos(orb.angle) * orb.dist;
+          const oy = this.y + Math.sin(orb.angle) * orb.dist;
+          const distToP = Math.hypot(player.x - ox, player.y - oy);
+          if (distToP < player.radius + orb.r) {
+            player.takeDamage(18, false, 'orb');
+          }
+        });
+
+        if (this.state === 'idle') {
+          const moveSpeed = (this.phase === 2 ? this.profile.speed * 1.25 : this.profile.speed);
+          this.x += Math.cos(this.facingAngle) * moveSpeed;
+          this.y += Math.sin(this.facingAngle) * moveSpeed;
+
+          if (this.timer <= 0) {
+            const dist = Math.hypot(player.x - this.x, player.y - this.y);
+            const hasAttack = this.selectNextAttack(dist);
+            if (!hasAttack) {
+              this.timer = 20;
+            }
+          }
+        } else if (this.state === 'windup') {
+          if (this.timer > 18) {
+            this.targetPos = { x: player.x, y: player.y };
+          }
+          if (this.timer <= 0) {
+            this.executeCurrentAttack();
+          }
+        } else if (this.state === 'whirlwind_active') {
+          this.spinAngle += 0.35;
+          this.x += Math.cos(this.facingAngle) * 3.2;
+          this.y += Math.sin(this.facingAngle) * 3.2;
+          const d = Math.hypot(player.x - this.x, player.y - this.y);
+          if (d < this.radius + player.radius + 40 && this.timer % 6 === 0) {
+            player.takeDamage(24, true, 'boss');
+          }
+          if (this.timer % 5 === 0) sound.playSwordSwing(360, 0.1);
+          if (this.timer <= 0) {
+            this.state = 'cooldown';
+            this.timer = 50;
+          }
+        } else if (this.state === 'wipe_charging') {
+          activeWipeAttack.timer--;
+          wipeTimerBar.style.width = `${(activeWipeAttack.timer / activeWipeAttack.maxTimer) * 100}%`;
+
+          const sheltered = isBlockedByPillars(activeWipeAttack.bossX, activeWipeAttack.bossY, player.x, player.y);
+          if (sheltered) {
+            wipeShelterStatus.textContent = '✓ SHELTERED BEHIND PILLAR — HOLD POSITION!';
+            wipeShelterStatus.className = 'text-[11px] font-sans tracking-widest text-emerald-400 font-bold mt-0.5';
+          } else {
+            wipeShelterStatus.textContent = '⚠ EXPOSED! MOVE INTO A GREEN PILLAR SHADOW CONE! ⚠';
+            wipeShelterStatus.className = 'text-[11px] font-sans tracking-widest text-amber-300 font-bold mt-0.5';
+          }
+
+          if (activeWipeAttack.timer % 24 === 0) sound.playAlarmBeep(sheltered ? 320 : 520);
+
+          if (activeWipeAttack.timer <= 0) {
+            this.triggerApocalypticWipe();
+          }
+        } else if (this.state === 'flamethrower_active') {
+          this.flamethrowerTimer--;
+          const aimAngle = this.facingAngle;
+          for (let k = 0; k < 3; k++) {
+            const spread = (Math.random() - 0.5) * 0.6;
+            const dist = Math.random() * 160 + 20;
+            const fx = this.x + Math.cos(aimAngle + spread) * dist;
+            const fy = this.y + Math.sin(aimAngle + spread) * dist;
+            spawnSparks(fx, fy, 2, '#f97316');
+
+            const dp = Math.hypot(player.x - fx, player.y - fy);
+            if (dp < 24 && this.flamethrowerTimer % 5 === 0) {
+              player.takeDamage(12, true, 'boss');
+            }
+          }
+          if (this.flamethrowerTimer <= 0) {
+            this.state = 'cooldown';
+            this.timer = 45;
+          }
+        } else if (this.state === 'pounce_chain') {
+          if (this.timer <= 0) {
+            this.pounceHitsRemaining--;
+            this.x = this.targetPos.x;
+            this.y = this.targetPos.y;
+            sound.playSlam();
+            triggerScreenShake(12);
+            spawnSparks(this.x, this.y, 16, '#fb7185');
+            const d = Math.hypot(player.x - this.x, player.y - this.y);
+            if (d < this.radius + player.radius + 25) {
+              player.takeDamage(28, true, 'boss');
+            }
+
+            if (this.pounceHitsRemaining > 0 && this.state === 'pounce_chain') {
+              this.timer = 22;
+              this.targetPos = { x: player.x, y: player.y };
+            } else if (this.state === 'pounce_chain') {
+              this.state = 'cooldown';
+              this.timer = 60;
+            }
+          }
+        } else if (this.state === 'strike_active') {
+          if (this.timer <= 0) {
+            this.state = 'cooldown';
+            this.timer = this.phase === 2 ? 40 : 60;
+          }
+        } else if (this.state === 'cooldown') {
+          if (this.timer <= 0) {
+            this.state = 'idle';
+            this.timer = this.phase === 2 ? 25 : 40;
+          }
+        } else if (this.state === 'staggered') {
+          centerPrompt.classList.remove('hidden');
+          if (this.timer <= 0) {
+            this.state = 'idle';
+            this.timer = 40;
+            this.poise = 0;
+            centerPrompt.classList.add('hidden');
+          }
+        }
+
+        currentArenaPillars.forEach(p => {
+          const d = Math.hypot(this.x - p.x, this.y - p.y);
+          const minDist = this.radius + p.r;
+          if (d < minDist && d > 0) {
+            const nx = (this.x - p.x) / d;
+            const ny = (this.y - p.y) / d;
+            this.x = p.x + nx * minDist;
+            this.y = p.y + ny * minDist;
+          }
+        });
+
+        const distCenter = Math.hypot(this.x, this.y);
+        if (distCenter > ARENA_RADIUS - this.radius) {
+          const a = Math.atan2(this.y, this.x);
+          this.x = Math.cos(a) * (ARENA_RADIUS - this.radius);
+          this.y = Math.sin(a) * (ARENA_RADIUS - this.radius);
+        }
+      },
+
+      selectNextAttack(dist) {
+        const atkPool = this.profile.attacks;
+        const longRangeAttacks = [
+          'shadow_teleport', 'void_blink', 'thunder_dive', 'pounce_combo', 'fireball_volley',
+          'ice_boulder', 'storm_cyclone', 'boomerang_scythe', 'summon_imps', 'creeping_vines',
+          'spore_pods', 'quicksand_vortex', 'starfall_rain', 'clone_mimic', 'celestial_orbs',
+          'stalagmite_spikes', 'void_rifts', 'iron_cannon', 'shadow_pulse', 'dash_flurry',
+          'frost_nova', 'thorn_barrage', 'lightning_chain', 'sand_lance', 'void_lance',
+          'flame_trail', 'spear_lance', 'gravity_wave'
+        ];
+        const wipeAttacks = ['solar_supernova', 'apocalyptic_cataclysm'];
+        
+        let validAttacks = [];
+
+        if (dist > 150) {
+          validAttacks = atkPool.filter(a => longRangeAttacks.includes(a));
+          const availableWipes = atkPool.filter(a => wipeAttacks.includes(a));
+          if (availableWipes.length > 0 && Math.random() < 0.22) {
+            validAttacks.push(...availableWipes);
+          }
+          if (validAttacks.length === 0) return false;
+        } else {
+          validAttacks = atkPool.filter(a => !longRangeAttacks.includes(a) && !wipeAttacks.includes(a));
+          const availableWipes = atkPool.filter(a => wipeAttacks.includes(a));
+          if (availableWipes.length > 0 && Math.random() < 0.14) {
+            validAttacks.push(...availableWipes);
+          }
+          if (validAttacks.length === 0) {
+            validAttacks = atkPool.filter(a => !wipeAttacks.includes(a));
+            if (validAttacks.length === 0) validAttacks = atkPool;
+          }
+        }
+
+        const chosen = validAttacks[Math.floor(Math.random() * validAttacks.length)];
+        this.currentAttackType = chosen;
+
+        if (wipeAttacks.includes(chosen)) {
+          this.state = 'wipe_charging';
+          this.x = 0;
+          this.y = 0;
+          spawnSparks(0, 0, 35, this.profile.eyeColor);
+          const chargeFrames = 260;
+          activeWipeAttack = {
+            maxTimer: chargeFrames,
+            timer: chargeFrames,
+            bossX: this.x,
+            bossY: this.y,
+            name: this.profile.wipeName || 'Apocalyptic Cataclysm'
+          };
+          wipeWarning.classList.remove('hidden');
+          sound.playAlarmBeep(320);
+          return true;
+        }
+
+        this.state = 'windup';
+        this.targetPos = { x: player.x, y: player.y };
+
+        if (chosen === 'whirlwind') {
+          this.timer = 50;
+        } else if (chosen === 'shadow_teleport' || chosen === 'void_blink') {
+          this.timer = 32;
+        } else if (chosen === 'kunai_fan') {
+          this.timer = 40;
+        } else if (chosen === 'ice_boulder') {
+          this.timer = 45;
+        } else if (chosen === 'quicksand_vortex') {
+          this.timer = 55;
+        } else {
+          this.timer = this.phase === 2 ? 42 : 58;
+        }
+        
+        return true;
+      },
+
+      executeCurrentAttack() {
+        const atk = this.currentAttackType;
+
+        if (atk === 'whirlwind') {
+          this.state = 'whirlwind_active';
+          this.timer = 90;
+          return;
+        } else if (atk === 'magma_fissure') {
+          this.state = 'strike_active';
+          this.timer = 15;
+          sound.playSlam();
+          createGroundCrack(this.x, this.y);
+          groundHazards.push({ x: this.x, y: this.y, r: 60, life: 280, color: '#ea580c', dmg: 16 });
+          createShockwave(this.x, this.y, 160, 30, '#ef4444');
+          return;
+        }
+
+        if (atk === 'iron_cannon') {
+          this.state = 'strike_active';
+          this.timer = 18;
+          bossProjectiles.push({
+            x: this.x, y: this.y,
+            vx: Math.cos(this.facingAngle) * 7.5,
+            vy: Math.sin(this.facingAngle) * 7.5,
+            r: 13, color: '#ef4444', damage: 38, life: 180
+          });
+          return;
+        } else if (atk === 'shadow_pulse' || atk === 'frost_nova' || atk === 'gravity_wave') {
+          this.state = 'strike_active';
+          this.timer = 24;
+          const color = atk === 'frost_nova' ? '#38bdf8' : (atk === 'gravity_wave' ? '#c084fc' : '#c084fc');
+          createShockwave(this.x, this.y, 190, 26, color);
+          groundHazards.push({
+            x: this.x, y: this.y, r: 190, life: 90,
+            color, dmg: atk === 'frost_nova' ? 24 : 28
+          });
+          return;
+        } else if (atk === 'dash_flurry') {
+          this.state = 'pounce_chain';
+          this.pounceHitsRemaining = 4;
+          this.timer = 12;
+          this.targetPos = { x: player.x, y: player.y };
+          return;
+        }
+
+        if (atk === 'shadow_teleport' || atk === 'void_blink') {
+          spawnSparks(this.x, this.y, 25, '#c084fc');
+          const oppAngle = player.facingAngle + Math.PI;
+          this.x = player.x + Math.cos(oppAngle) * 58;
+          this.y = player.y + Math.sin(oppAngle) * 58;
+          spawnSparks(this.x, this.y, 25, '#c084fc');
+          sound.playWhoosh(400);
+          this.state = 'strike_active';
+          this.timer = 18;
+          setTimeout(() => {
+            if (scene === 'arena' && gameState === 'playing' && Math.hypot(player.x - this.x, player.y - this.y) < 75) {
+              player.takeDamage(32, true, 'boss');
+            }
+          }, 95);
+          return;
+        } else if (atk === 'kunai_fan') {
+          this.state = 'strike_active';
+          this.timer = 15;
+          sound.playSwordSwing(650, 0.1);
+          const baseAngle = this.facingAngle;
+          for (let i = -2; i <= 2; i++) {
+            const a = baseAngle + i * 0.22;
+            bossProjectiles.push({
+              x: this.x,
+              y: this.y,
+              vx: Math.cos(a) * 6.8,
+              vy: Math.sin(a) * 6.8,
+              r: 6,
+              color: '#c084fc',
+              damage: 18,
+              life: 140
+            });
+          }
+          return;
+        }
+
+        if (atk === 'fireball_volley' || atk === 'celestial_orbs') {
+          this.state = 'strike_active';
+          this.timer = 20;
+          sound.playWhoosh(450);
+          const orbColor = atk === 'celestial_orbs' ? '#fef08a' : '#f97316';
+          for (let i = -1; i <= 1; i++) {
+            const a = this.facingAngle + i * 0.35;
+            bossProjectiles.push({
+              x: this.x,
+              y: this.y,
+              vx: Math.cos(a) * 5.2,
+              vy: Math.sin(a) * 5.2,
+              r: 9,
+              color: orbColor,
+              damage: 24,
+              life: 180,
+              homing: true
+            });
+          }
+          return;
+        } else if (atk === 'summon_imps') {
+          this.state = 'strike_active';
+          this.timer = 25;
+          sound.playWhoosh(250);
+          for (let i = 0; i < 2; i++) {
+            const offsetA = Math.random() * Math.PI * 2;
+            enemyMinions.push({
+              x: this.x + Math.cos(offsetA) * 60,
+              y: this.y + Math.sin(offsetA) * 60,
+              r: 12,
+              maxHp: 30,
+              hp: 30,
+              speed: 2.1,
+              color: '#ea580c',
+              damage: 14
+            });
+          }
+          return;
+        }
+
+        if (atk === 'ice_boulder') {
+          this.state = 'strike_active';
+          this.timer = 20;
+          sound.playSlam();
+          const angle = this.facingAngle;
+          bossProjectiles.push({
+            x: this.x,
+            y: this.y,
+            vx: Math.cos(angle) * 4.2,
+            vy: Math.sin(angle) * 4.2,
+            r: 22,
+            color: '#38bdf8',
+            damage: 34,
+            life: 200,
+            isBoulder: true
+          });
+          return;
+        } else if (atk === 'stalagmite_spikes') {
+          this.state = 'strike_active';
+          this.timer = 25;
+          sound.playSlam();
+          const lockAngle = this.facingAngle;
+          for (let step = 1; step <= 5; step++) {
+            setTimeout(() => {
+              if (scene !== 'arena' || gameState !== 'playing') return;
+              const sx = this.x + Math.cos(lockAngle) * (step * 50);
+              const sy = this.y + Math.sin(lockAngle) * (step * 50);
+              groundHazards.push({ x: sx, y: sy, r: 28, life: 120, color: '#38bdf8', dmg: 22 });
+              spawnSparks(sx, sy, 8, '#7dd3fc');
+              if (Math.hypot(player.x - sx, player.y - sy) < 32) {
+                player.takeDamage(22, true, 'boss');
+              }
+            }, step * 90);
+          }
+          return;
+        } else if (atk === 'glacial_stomp') {
+          this.state = 'strike_active';
+          this.timer = 24;
+          triggerScreenShake(20);
+          createShockwave(this.x, this.y, 190, 34, '#38bdf8');
+          for (let i = 0; i < 8; i++) {
+            const a = (Math.PI * 2 * i) / 8;
+            groundHazards.push({
+              x: this.x + Math.cos(a) * 72,
+              y: this.y + Math.sin(a) * 72,
+              r: 26, life: 100, color: '#bae6fd', dmg: 24
+            });
+          }
+          return;
+        }
+
+        if (atk === 'spore_pods') {
+          this.state = 'strike_active';
+          this.timer = 18;
+          for (let i = 0; i < 4; i++) {
+            const a = Math.random() * Math.PI * 2;
+            bossProjectiles.push({
+              x: this.x,
+              y: this.y,
+              vx: Math.cos(a) * 3.5,
+              vy: Math.sin(a) * 3.5,
+              r: 8,
+              color: '#4ade80',
+              damage: 16,
+              life: 160,
+              homing: true
+            });
+          }
+          return;
+        } else if (atk === 'creeping_vines') {
+          this.state = 'strike_active';
+          this.timer = 20;
+          for (let i = 0; i < 2; i++) {
+            enemyMinions.push({
+              x: player.x + (Math.random() * 160 - 80),
+              y: player.y + (Math.random() * 160 - 80),
+              r: 10,
+              maxHp: 20,
+              hp: 20,
+              speed: 1.6,
+              color: '#15803d',
+              damage: 12
+            });
+          }
+          return;
+        } else if (atk === 'thorn_barrage') {
+          this.state = 'strike_active';
+          this.timer = 20;
+          for (let i = -3; i <= 3; i++) {
+            const a = this.facingAngle + i * 0.12;
+            bossProjectiles.push({
+              x: this.x, y: this.y,
+              vx: Math.cos(a) * 5.8, vy: Math.sin(a) * 5.8,
+              r: 6, color: '#4ade80', damage: 17, life: 150
+            });
+          }
+          return;
+        } else if (atk === 'bramble_whip') {
+          this.state = 'strike_active';
+          this.timer = 22;
+          createShockwave(this.x, this.y, 115, 30, '#22c55e');
+          if (Math.hypot(player.x - this.x, player.y - this.y) < 150) {
+            player.takeDamage(30, true, 'boss');
+          }
+          return;
+        }
+
+        if (atk === 'thunder_dive') {
+          this.state = 'strike_active';
+          this.timer = 22;
+          this.x = this.targetPos.x;
+          this.y = this.targetPos.y;
+          sound.playSlam();
+          triggerScreenShake(22);
+          spawnSparks(this.x, this.y, 35, '#fde047');
+          const d = Math.hypot(player.x - this.x, player.y - this.y);
+          if (d < this.radius + player.radius + 35) {
+            player.takeDamage(32, true, 'boss');
+          }
+          createShockwave(this.x, this.y, 170, 26, '#facc15');
+          return;
+        } else if (atk === 'storm_cyclone') {
+          this.state = 'strike_active';
+          this.timer = 20;
+          const a = this.facingAngle;
+          bossProjectiles.push({
+            x: this.x,
+            y: this.y,
+            vx: Math.cos(a) * 2.8,
+            vy: Math.sin(a) * 2.8,
+            r: 25,
+            color: '#facc15',
+            damage: 20,
+            life: 220
+          });
+          return;
+        } else if (atk === 'thunder_thrust' || atk === 'lightning_chain') {
+          this.state = 'strike_active';
+          this.timer = 18;
+          const count = atk === 'lightning_chain' ? 7 : 4;
+          for (let i = 1; i <= count; i++) {
+            const sx = this.x + Math.cos(this.facingAngle) * i * 42;
+            const sy = this.y + Math.sin(this.facingAngle) * i * 42;
+            groundHazards.push({ x: sx, y: sy, r: 18, life: 70, color: '#fde047', dmg: 20 });
+            spawnSparks(sx, sy, 5, '#fde047');
+          }
+          if (Math.hypot(player.x - this.x, player.y - this.y) < 150) {
+            player.takeDamage(atk === 'lightning_chain' ? 26 : 34, true, 'boss');
+          }
+          return;
+        }
+
+        if (atk === 'quicksand_vortex') {
+          this.state = 'strike_active';
+          this.timer = 45;
+          sound.playWhoosh(180);
+          groundHazards.push({ x: this.x, y: this.y, r: 180, life: 180, color: '#d97706', isVortex: true });
+          return;
+        } else if (atk === 'boomerang_scythe') {
+          this.state = 'strike_active';
+          this.timer = 20;
+          sound.playSwordSwing(420, 0.2);
+          const a = this.facingAngle;
+          bossProjectiles.push({
+            x: this.x,
+            y: this.y,
+            vx: Math.cos(a) * 6.5,
+            vy: Math.sin(a) * 6.5,
+            r: 16,
+            color: '#fbbf24',
+            damage: 28,
+            life: 150,
+            isBoomerang: true,
+            origX: this.x,
+            origY: this.y
+          });
+          return;
+        } else if (atk === 'earth_tremor') {
+          this.state = 'strike_active';
+          this.timer = 30;
+          triggerScreenShake(18);
+          for (let i = 1; i <= 5; i++) {
+            const a = this.facingAngle;
+            const sx = this.x + Math.cos(a) * i * 55;
+            const sy = this.y + Math.sin(a) * i * 55;
+            setTimeout(() => {
+              if (scene !== 'arena') return;
+              groundHazards.push({ x: sx, y: sy, r: 30, life: 110, color: '#f59e0b', dmg: 22 });
+              spawnSparks(sx, sy, 10, '#fbbf24');
+            }, i * 70);
+          }
+          return;
+        } else if (atk === 'sand_lance') {
+          this.state = 'strike_active';
+          this.timer = 16;
+          bossProjectiles.push({
+            x: this.x, y: this.y,
+            vx: Math.cos(this.facingAngle) * 8,
+            vy: Math.sin(this.facingAngle) * 8,
+            r: 10, color: '#fbbf24', damage: 34, life: 180
+          });
+          return;
+        }
+
+        if (atk === 'void_rifts') {
+          this.state = 'strike_active';
+          this.timer = 20;
+          const rx = player.x;
+          const ry = player.y;
+          setTimeout(() => {
+            if (scene !== 'arena' || gameState !== 'playing') return;
+            groundHazards.push({ x: rx, y: ry, r: 45, life: 80, color: '#a855f7', dmg: 32 });
+            sound.playSlam();
+            triggerScreenShake(14);
+            if (Math.hypot(player.x - rx, player.y - ry) < 45) {
+              player.takeDamage(32, true, 'boss');
+            }
+          }, 600);
+          return;
+        } else if (atk === 'void_lance') {
+          this.state = 'strike_active';
+          this.timer = 18;
+          for (let i = -1; i <= 1; i++) {
+            const a = this.facingAngle + i * 0.22;
+            bossProjectiles.push({
+              x: this.x, y: this.y,
+              vx: Math.cos(a) * 7, vy: Math.sin(a) * 7,
+              r: 7, color: '#c084fc', damage: 26, life: 170, homing: true
+            });
+          }
+          return;
+        }
+
+        if (atk === 'flame_breath') {
+          this.state = 'flamethrower_active';
+          this.flamethrowerTimer = 60;
+          sound.playWhoosh(240);
+          return;
+        } else if (atk === 'pounce_combo') {
+          this.state = 'pounce_chain';
+          this.pounceHitsRemaining = 3;
+          this.timer = 15;
+          this.targetPos = { x: player.x, y: player.y };
+          return;
+        } else if (atk === 'claw_frenzy') {
+          this.state = 'strike_active';
+          this.timer = 26;
+          this.pounceHitsRemaining = 3;
+          for (let i = 1; i <= 3; i++) {
+            setTimeout(() => {
+              if (scene !== 'arena' || gameState !== 'playing') return;
+              this.x += Math.cos(this.facingAngle) * 18;
+              this.y += Math.sin(this.facingAngle) * 18;
+              spawnSparks(this.x, this.y, 10, '#fb7185');
+              if (Math.hypot(player.x - this.x, player.y - this.y) < this.radius + player.radius + 35) {
+                player.takeDamage(25, true, 'boss');
+              }
+            }, i * 180);
+          }
+          return;
+        } else if (atk === 'flame_trail') {
+          this.state = 'strike_active';
+          this.timer = 28;
+          for (let i = 1; i <= 6; i++) {
+            const sx = this.x + Math.cos(this.facingAngle) * i * 38;
+            const sy = this.y + Math.sin(this.facingAngle) * i * 38;
+            groundHazards.push({ x: sx, y: sy, r: 22, life: 150, color: '#f97316', dmg: 18 });
+          }
+          createShockwave(this.x, this.y, 150, 24, '#f97316');
+          return;
+        }
+
+        if (atk === 'starfall_rain') {
+          this.state = 'strike_active';
+          this.timer = 30;
+          sound.playWhoosh(500);
+          for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+              if (scene !== 'arena' || gameState !== 'playing') return;
+              const sx = player.x + (Math.random() * 140 - 70);
+              const sy = player.y + (Math.random() * 140 - 70);
+              spawnSparks(sx, sy, 12, '#fef08a');
+              createShockwave(sx, sy, 70, 22, '#fef08a');
+            }, i * 140);
+          }
+          return;
+        } else if (atk === 'clone_mimic') {
+          this.state = 'strike_active';
+          this.timer = 20;
+          enemyMinions.push({
+            x: this.x + 50,
+            y: this.y,
+            r: 24,
+            maxHp: 80,
+            hp: 80,
+            speed: 1.8,
+            color: '#a21caf',
+            damage: 20
+          });
+          return;
+        } else if (atk === 'spear_lance') {
+          this.state = 'strike_active';
+          this.timer = 16;
+          bossProjectiles.push({
+            x: this.x, y: this.y,
+            vx: Math.cos(this.facingAngle) * 9,
+            vy: Math.sin(this.facingAngle) * 9,
+            r: 8, color: '#fef08a', damage: 36, life: 190
+          });
+          return;
+        }
+
+        this.state = 'strike_active';
+        this.timer = 14;
+        this.x += Math.cos(this.facingAngle) * 24;
+        this.y += Math.sin(this.facingAngle) * 24;
+        sound.playSwordSwing(280, 0.22);
+
+        if (atk === 'cleave') {
+          triggerScreenShake(12);
+          createShockwave(this.x, this.y, 112, 32, this.profile.eyeColor, false);
+        } else if (atk === 'slam') {
+          triggerScreenShake(18);
+          createShockwave(this.x, this.y, 145, 36, '#ef4444');
+        } else if (atk === 'orbiting_orbs') {
+          for (let i = 0; i < 4; i++) {
+            const a = (Math.PI * 2 * i) / 4 + this.orbitingOrbs.length * 0.1;
+            bossProjectiles.push({
+              x: this.x, y: this.y,
+              vx: Math.cos(a) * 4.5, vy: Math.sin(a) * 4.5,
+              r: 8, color: this.profile.eyeColor, damage: 24, life: 170, homing: true
+            });
+          }
+        }
+        
+        const d = Math.hypot(player.x - this.x, player.y - this.y);
+        if (d < this.radius + player.radius + 75) {
+          player.takeDamage(30, true, 'boss');
+        }
+      },
+
+      triggerApocalypticWipe() {
+        wipeWarning.classList.add('hidden');
+        triggerScreenShake(35);
+        sound.playSlam();
+
+        const blastX = activeWipeAttack.bossX;
+        const blastY = activeWipeAttack.bossY;
+
+        createShockwave(blastX, blastY, ARENA_RADIUS, 0, '#f97316', true);
+        createShockwave(blastX, blastY, ARENA_RADIUS * 0.85, 0, '#fef08a', true);
+        spawnSparks(blastX, blastY, 65, '#f97316');
+
+        const isSafe = isBlockedByPillars(blastX, blastY, player.x, player.y);
+
+        if (!isSafe) {
+          player.takeDamage(95, false, 'wipe');
+          spawnFloatingText(player.x, player.y, 'SCORCHED BY CATACLYSM!', '#ef4444');
+        } else {
+          spawnSparks(player.x, player.y, 28, '#38bdf8');
+          sound.playParryDing();
+          spawnFloatingText(player.x, player.y, 'SHELTERED BEHIND PILLAR!', '#4ade80');
+        }
+
+        activeWipeAttack = null;
+        this.state = 'cooldown';
+        this.timer = 90;
+      },
+
+      takeDamage(amount, poiseDmg) {
+        this.hp = Math.max(0, this.hp - amount);
+        this.poise += poiseDmg;
+
+        if (this.poise >= this.maxPoise && this.state !== 'staggered' && this.state !== 'wipe_charging') {
+          this.state = 'staggered';
+          this.timer = 135;
+          sound.playStaggerBreak();
+          triggerScreenShake(18);
+          spawnSparks(this.x, this.y, 35, '#facc15');
+          spawnFloatingText(this.x, this.y, 'POSTURE BROKEN!', '#facc15');
+        }
+
+        if (this.hp <= 0) {
+          endGame(true);
+        }
+      },
+
+      draw() {
+        if (scene !== 'arena') return;
+        const scr = worldToScreen(this.x, this.y);
+
+        if (this.state === 'windup') {
+          const isParryFlashWindow = this.timer <= 15;
+          const attackInfo = getAttackInfo(this.currentAttackType);
+          const telegraphColor = isParryFlashWindow ? '#fef08a' : attackInfo[1];
+          if (isParryFlashWindow) {
+            ctx.save();
+            ctx.fillStyle = '#fef08a';
+            ctx.font = 'bold 11px Cinzel';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = '#000';
+            ctx.shadowBlur = 6;
+            ctx.fillText('PARRY NOW [R-CLICK / F]', scr.x, scr.y - this.height - 58);
+            ctx.restore();
+          }
+          const aimAngle = Math.atan2(this.targetPos.y - this.y, this.targetPos.x - this.x);
+          const projectileTypes = [
+            'kunai_fan', 'fireball_volley', 'celestial_orbs', 'ice_boulder', 'storm_cyclone',
+            'boomerang_scyche', 'boomerang_scythe', 'spore_pods', 'thorn_barrage',
+            'lightning_chain', 'sand_lance', 'void_lance', 'spear_lance', 'iron_cannon'
+          ];
+          const lineTypes = [
+            'iron_cannon', 'sand_lance', 'void_lance', 'spear_lance', 'thunder_thrust',
+            'lightning_chain', 'earth_tremor', 'stalagmite_spikes', 'flame_trail'
+          ];
+          const dashTypes = [
+            'shadow_teleport', 'void_blink', 'thunder_dive', 'pounce_combo', 'dash_flurry'
+          ];
+          const groundTypes = [
+            'magma_fissure', 'stalagmite_spikes', 'glacial_stomp', 'quicksand_vortex',
+            'void_rifts', 'earth_tremor', 'starfall_rain', 'gravity_wave', 'shadow_pulse',
+            'frost_nova', 'flame_trail'
+          ];
+          const summonTypes = ['summon_imps', 'creeping_vines', 'clone_mimic'];
+          const coneTypes = [
+            'cleave', 'slam', 'bramble_whip', 'thunder_thrust', 'claw_frenzy',
+            'flame_breath', 'whirlwind'
+          ];
+
+          ctx.save();
+          ctx.strokeStyle = telegraphColor;
+          ctx.fillStyle = isParryFlashWindow
+            ? 'rgba(250, 204, 21, 0.24)'
+            : `${telegraphColor}28`;
+          ctx.lineWidth = isParryFlashWindow ? 4 : 3;
+          ctx.setLineDash(isParryFlashWindow ? [] : [10, 7]);
+
+          if (projectileTypes.includes(this.currentAttackType) || lineTypes.includes(this.currentAttackType)) {
+            const start = worldToScreen(this.x, this.y);
+            const target = worldToScreen(this.targetPos.x, this.targetPos.y);
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y - 22);
+            ctx.lineTo(target.x, target.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.beginPath();
+            ctx.ellipse(target.x, target.y, 24, 24 * Y_SQUASH, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            for (let i = 1; i <= 5; i++) {
+              const t = i / 6;
+              const x = start.x + (target.x - start.x) * t;
+              const y = (start.y - 22) + (target.y - (start.y - 22)) * t;
+              ctx.beginPath();
+              ctx.arc(x, y, i % 2 ? 2.5 : 4, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          } else if (dashTypes.includes(this.currentAttackType)) {
+            const start = worldToScreen(this.x, this.y);
+            const target = worldToScreen(this.targetPos.x, this.targetPos.y);
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y - 18);
+            ctx.lineTo(target.x, target.y);
+            ctx.lineWidth = 7;
+            ctx.strokeStyle = `${telegraphColor}55`;
+            ctx.stroke();
+            ctx.setLineDash([14, 8]);
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y - 18);
+            ctx.lineTo(target.x, target.y);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = telegraphColor;
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.ellipse(target.x, target.y, 38, 38 * Y_SQUASH, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          } else if (groundTypes.includes(this.currentAttackType)) {
+            const target = worldToScreen(this.targetPos.x, this.targetPos.y);
+            const radius = this.currentAttackType === 'quicksand_vortex' ? 150 : 76;
+            ctx.beginPath();
+            ctx.ellipse(target.x, target.y, radius, radius * Y_SQUASH, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.ellipse(target.x, target.y, radius * 0.55, radius * Y_SQUASH * 0.55, 0, 0, Math.PI * 2);
+            ctx.stroke();
+          } else if (summonTypes.includes(this.currentAttackType)) {
+            const center = worldToScreen(this.targetPos.x, this.targetPos.y);
+            for (let i = -1; i <= 1; i += 2) {
+              ctx.beginPath();
+              ctx.ellipse(center.x + i * 55, center.y, 28, 28 * Y_SQUASH, 0, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.stroke();
+            }
+          } else if (coneTypes.includes(this.currentAttackType) || this.currentAttackType === 'flame_breath') {
+            ctx.translate(scr.x, scr.y);
+            ctx.beginPath();
+            ctx.moveTo(0, -28);
+            ctx.lineTo(
+              Math.cos(aimAngle - 0.45) * 150,
+              Math.sin(aimAngle - 0.45) * 150 * Y_SQUASH - 28
+            );
+            ctx.quadraticCurveTo(
+              Math.cos(aimAngle) * 170,
+              Math.sin(aimAngle) * 170 * Y_SQUASH - 28,
+              Math.cos(aimAngle + 0.45) * 150,
+              Math.sin(aimAngle + 0.45) * 150 * Y_SQUASH - 28
+            );
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          } else {
+            ctx.translate(scr.x, scr.y);
+            ctx.beginPath();
+            ctx.ellipse(0, -28, 115, 115 * Y_SQUASH, aimAngle, -Math.PI / 2.8, Math.PI / 2.8);
+            ctx.fill();
+            ctx.stroke();
+          }
+
+          ctx.setLineDash([]);
+          ctx.restore();
+        }
+
+        if (this.state === 'wipe_charging' && activeWipeAttack) {
+          ctx.save();
+          ctx.translate(scr.x, scr.y);
+          const chargeRatio = 1 - (activeWipeAttack.timer / activeWipeAttack.maxTimer);
+          const pulseR = 45 + chargeRatio * 55 + Math.sin(Date.now() * 0.03) * 8;
+          ctx.beginPath();
+          ctx.ellipse(0, -30, pulseR, pulseR * Y_SQUASH, 0, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(249, 115, 22, ${0.25 + chargeRatio * 0.45})`;
+          ctx.fill();
+          ctx.strokeStyle = '#fef08a';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        this.orbitingOrbs.forEach(orb => {
+          const ox = this.x + Math.cos(orb.angle) * orb.dist;
+          const oy = this.y + Math.sin(orb.angle) * orb.dist;
+          const oScr = worldToScreen(ox, oy);
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(oScr.x, oScr.y - 20, orb.r, 0, Math.PI * 2);
+          ctx.fillStyle = this.profile.eyeColor;
+          ctx.shadowColor = this.profile.eyeColor;
+          ctx.shadowBlur = 12;
+          ctx.fill();
+          ctx.restore();
+        });
+
+        ctx.save();
+        ctx.translate(scr.x, scr.y);
+
+        const auraPulse = 0.18 + Math.sin(Date.now() * 0.004) * 0.06;
+        ctx.beginPath();
+        ctx.ellipse(0, -42, this.radius * (1.45 + this.phase * 0.08), this.radius * Y_SQUASH * 1.65, 0, 0, Math.PI * 2);
+        ctx.fillStyle = this.profile.eyeColor;
+        ctx.globalAlpha = this.phase === 2 ? auraPulse + 0.12 : auraPulse;
+        ctx.shadowColor = this.profile.eyeColor;
+        ctx.shadowBlur = this.phase === 2 ? 28 : 16;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.ellipse(0, 4, this.radius * 1.25, this.radius * Y_SQUASH * 0.9, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+        ctx.fill();
+
+        if (this.state === 'staggered') {
+          ctx.beginPath();
+          ctx.ellipse(0, -this.height - 15, 24, 24 * Y_SQUASH, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 3.5;
+          ctx.stroke();
+        }
+
+        const kneelOffset = this.state === 'staggered' ? 18 : 0;
+        drawBossSignature(this.profile, this.radius, kneelOffset, this.phase);
+
+        ctx.beginPath();
+        ctx.ellipse(0, -36 + kneelOffset, this.radius * 0.6, this.radius * 0.8, 0, 0, Math.PI * 2);
+        ctx.fillStyle = this.state === 'staggered' ? '#451a03' : this.profile.color;
+        ctx.fill();
+        ctx.strokeStyle = '#09090b';
+        ctx.lineWidth = 3.5;
+        ctx.stroke();
+
+        ctx.fillStyle = this.phase === 2 ? this.profile.eyeColor : '#27272a';
+        ctx.beginPath();
+        ctx.ellipse(-this.radius * 0.62, -45 + kneelOffset, this.radius * 0.42, 9, -0.18, 0, Math.PI * 2);
+        ctx.ellipse(this.radius * 0.62, -45 + kneelOffset, this.radius * 0.42, 9, 0.18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#09090b';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.strokeStyle = this.phase === 2 ? this.profile.eyeColor : 'rgba(226,232,240,0.42)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, -38 + kneelOffset, this.radius * 0.48, 0.15, Math.PI - 0.15);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, -68 + kneelOffset, this.radius * 0.38, 0, Math.PI * 2);
+        ctx.fillStyle = '#18181b';
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#3f3f46';
+        ctx.beginPath();
+        ctx.moveTo(-12, -75 + kneelOffset);
+        ctx.lineTo(-20, -96 + kneelOffset);
+        ctx.lineTo(-4, -78 + kneelOffset);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(12, -75 + kneelOffset);
+        ctx.lineTo(20, -96 + kneelOffset);
+        ctx.lineTo(4, -78 + kneelOffset);
+        ctx.fill();
+
+        ctx.fillStyle = this.profile.eyeColor;
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(-6, -69 + kneelOffset, 3.2, 0, Math.PI * 2);
+        ctx.arc(6, -69 + kneelOffset, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.save();
+        ctx.translate(0, -30 + kneelOffset);
+
+        if (this.state === 'whirlwind_active') {
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 95, 95 * Y_SQUASH, this.spinAngle, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)';
+          ctx.lineWidth = 12;
+          ctx.stroke();
+        } else {
+          const swordAngle = this.facingAngle;
+          const swordLen = 65;
+          ctx.strokeStyle = this.phase === 2 ? this.profile.eyeColor : '#94a3b8';
+          ctx.lineWidth = 6;
+          ctx.shadowColor = this.profile.eyeColor;
+          ctx.shadowBlur = this.phase === 2 ? 14 : 5;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(swordAngle) * 10, Math.sin(swordAngle) * 10 * Y_SQUASH);
+          ctx.lineTo(Math.cos(swordAngle) * swordLen, Math.sin(swordAngle) * swordLen * Y_SQUASH);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.restore();
+        ctx.restore();
+      }
+    };
+
+    function drawBossSignature(profile, radius, kneelOffset, phase) {
+      const accent = profile.eyeColor;
+      ctx.save();
+      ctx.strokeStyle = accent;
+      ctx.fillStyle = profile.color;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = accent;
+      ctx.shadowBlur = phase === 2 ? 12 : 5;
+
+      switch (profile.id) {
+        case 1:
+          ctx.fillStyle = '#292524';
+          ctx.beginPath();
+          ctx.ellipse(-radius * 0.75, -47 + kneelOffset, 15, 11, -0.3, 0, Math.PI * 2);
+          ctx.ellipse(radius * 0.75, -47 + kneelOffset, 15, 11, 0.3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(-12, -77 + kneelOffset);
+          ctx.lineTo(-24, -112 + kneelOffset);
+          ctx.lineTo(-2, -88 + kneelOffset);
+          ctx.moveTo(12, -77 + kneelOffset);
+          ctx.lineTo(24, -112 + kneelOffset);
+          ctx.lineTo(2, -88 + kneelOffset);
+          ctx.stroke();
+          break;
+        case 2:
+          ctx.fillStyle = '#1e1b4b';
+          ctx.beginPath();
+          ctx.arc(0, -72 + kneelOffset, radius * 0.62, Math.PI, 0);
+          ctx.lineTo(radius * 0.4, -48 + kneelOffset);
+          ctx.lineTo(-radius * 0.4, -48 + kneelOffset);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(-radius * 0.55, -29 + kneelOffset);
+          ctx.lineTo(-radius * 1.15, -58 + kneelOffset);
+          ctx.moveTo(radius * 0.55, -29 + kneelOffset);
+          ctx.lineTo(radius * 1.15, -58 + kneelOffset);
+          ctx.stroke();
+          break;
+        case 3:
+          ctx.fillStyle = '#7c2d12';
+          ctx.beginPath();
+          ctx.moveTo(-18, -75 + kneelOffset);
+          for (let i = 0; i < 7; i++) {
+            const x = -18 + i * 6;
+            ctx.lineTo(x, -105 - (i % 2 ? 12 : 0) + kneelOffset);
+          }
+          ctx.lineTo(18, -75 + kneelOffset);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          break;
+        case 4:
+          ctx.fillStyle = '#075985';
+          ctx.beginPath();
+          ctx.moveTo(-radius * 0.55, -51 + kneelOffset);
+          ctx.lineTo(-radius * 1.25, -78 + kneelOffset);
+          ctx.lineTo(-radius * 0.55, -90 + kneelOffset);
+          ctx.lineTo(0, -66 + kneelOffset);
+          ctx.lineTo(radius * 0.55, -90 + kneelOffset);
+          ctx.lineTo(radius * 1.25, -78 + kneelOffset);
+          ctx.lineTo(radius * 0.55, -51 + kneelOffset);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          break;
+        case 5:
+          ctx.strokeStyle = '#4ade80';
+          ctx.lineWidth = 4;
+          for (let side of [-1, 1]) {
+            ctx.beginPath();
+            ctx.moveTo(side * 8, -42 + kneelOffset);
+            ctx.bezierCurveTo(side * 35, -58, side * 18, -78, side * 42, -94 + kneelOffset);
+            ctx.stroke();
+          }
+          ctx.fillStyle = '#166534';
+          [-18, 18].forEach((x) => {
+            ctx.beginPath();
+            ctx.ellipse(x, -88 + kneelOffset, 10, 5, x > 0 ? 0.5 : -0.5, 0, Math.PI * 2);
+            ctx.fill();
+          });
+          break;
+        case 6:
+          ctx.strokeStyle = '#fde047';
+          ctx.lineWidth = 3;
+          for (let side of [-1, 1]) {
+            ctx.beginPath();
+            ctx.moveTo(side * 12, -42 + kneelOffset);
+            ctx.lineTo(side * 42, -76 + kneelOffset);
+            ctx.lineTo(side * 58, -45 + kneelOffset);
+            ctx.lineTo(side * 78, -70 + kneelOffset);
+            ctx.stroke();
+          }
+          break;
+        case 7:
+          ctx.fillStyle = '#92400e';
+          ctx.beginPath();
+          ctx.ellipse(0, -83 + kneelOffset, radius * 0.78, 13, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.strokeStyle = '#fbbf24';
+          ctx.beginPath();
+          ctx.arc(0, -58 + kneelOffset, radius * 1.15, Math.PI * 0.1, Math.PI * 0.9);
+          ctx.stroke();
+          break;
+        case 8:
+          ctx.strokeStyle = '#e879f9';
+          ctx.lineWidth = 3;
+          [0.8, 1.15].forEach((scale) => {
+            ctx.beginPath();
+            ctx.ellipse(0, -56 + kneelOffset, radius * scale, radius * scale * 0.38, Math.PI / 2, 0, Math.PI * 2);
+            ctx.stroke();
+          });
+          break;
+        case 9:
+          ctx.fillStyle = '#4c0519';
+          ctx.beginPath();
+          ctx.moveTo(-18, -74 + kneelOffset);
+          ctx.lineTo(-42, -104 + kneelOffset);
+          ctx.lineTo(-34, -66 + kneelOffset);
+          ctx.lineTo(-58, -82 + kneelOffset);
+          ctx.lineTo(-42, -48 + kneelOffset);
+          ctx.lineTo(0, -60 + kneelOffset);
+          ctx.lineTo(42, -48 + kneelOffset);
+          ctx.lineTo(58, -82 + kneelOffset);
+          ctx.lineTo(34, -66 + kneelOffset);
+          ctx.lineTo(42, -104 + kneelOffset);
+          ctx.lineTo(18, -74 + kneelOffset);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          break;
+        case 10:
+          ctx.fillStyle = '#854d0e';
+          ctx.beginPath();
+          ctx.moveTo(-28, -78 + kneelOffset);
+          ctx.lineTo(-16, -99 + kneelOffset);
+          ctx.lineTo(-6, -88 + kneelOffset);
+          ctx.lineTo(0, -112 + kneelOffset);
+          ctx.lineTo(6, -88 + kneelOffset);
+          ctx.lineTo(16, -99 + kneelOffset);
+          ctx.lineTo(28, -78 + kneelOffset);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(0, -63 + kneelOffset, 46, Math.PI * 0.12, Math.PI * 0.88);
+          ctx.stroke();
+          break;
+      }
+      ctx.restore();
+    }
+
+    /* ==========================================================================
+       SCENE ENVIRONMENT DRAWING (SANCTUARY VS ARENA)
+       ========================================================================== */
+    function drawEnvironment() {
+      const centerScr = worldToScreen(0, 0);
+
+      ctx.fillStyle = '#040306';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (scene === 'sanctuary') {
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(centerScr.x, centerScr.y, SANCTUARY_RADIUS, SANCTUARY_RADIUS * Y_SQUASH, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#110f17';
+        ctx.fill();
+        ctx.strokeStyle = '#3e352c';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+        ctx.clip();
+
+        const fireScr = worldToScreen(sanctuaryProps.bonfire.x, sanctuaryProps.bonfire.y);
+        const glow = ctx.createRadialGradient(fireScr.x, fireScr.y, 8, fireScr.x, fireScr.y, 320);
+        glow.addColorStop(0, 'rgba(249, 115, 22, 0.38)');
+        glow.addColorStop(0.35, 'rgba(180, 83, 9, 0.16)');
+        glow.addColorStop(0.8, 'rgba(69, 26, 3, 0.06)');
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(centerScr.x - SANCTUARY_RADIUS, centerScr.y - SANCTUARY_RADIUS, SANCTUARY_RADIUS * 2, SANCTUARY_RADIUS * 2);
+
+        ctx.strokeStyle = 'rgba(70, 60, 52, 0.25)';
+        ctx.lineWidth = 1.5;
+        const step = 60;
+        for (let d = -SANCTUARY_RADIUS; d <= SANCTUARY_RADIUS; d += step) {
+          const p1 = worldToScreen(-SANCTUARY_RADIUS, d);
+          const p2 = worldToScreen(SANCTUARY_RADIUS, d);
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+
+          const p3 = worldToScreen(d, -SANCTUARY_RADIUS);
+          const p4 = worldToScreen(d, SANCTUARY_RADIUS);
+          ctx.beginPath();
+          ctx.moveTo(p3.x, p3.y);
+          ctx.lineTo(p4.x, p4.y);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.18)';
+        ctx.lineWidth = 2;
+        [110, 220, 330].forEach((radius) => {
+          ctx.beginPath();
+          ctx.ellipse(centerScr.x, centerScr.y, radius, radius * Y_SQUASH, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+
+        ctx.restore();
+      } else {
+        const aConfig = (boss.profile && boss.profile.arena) ? boss.profile.arena : {
+          floorColor: '#0f0e13',
+          borderColor: '#383540',
+          gridColor: 'rgba(75, 70, 85, 0.22)'
+        };
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(centerScr.x, centerScr.y, ARENA_RADIUS, ARENA_RADIUS * Y_SQUASH, 0, 0, Math.PI * 2);
+        ctx.fillStyle = aConfig.floorColor;
+        ctx.fill();
+        ctx.strokeStyle = aConfig.borderColor;
+        ctx.lineWidth = 7;
+        ctx.stroke();
+        ctx.clip();
+
+        ctx.strokeStyle = aConfig.gridColor;
+        ctx.lineWidth = 1.5;
+        const step = 65;
+        for (let d = -ARENA_RADIUS; d <= ARENA_RADIUS; d += step) {
+          const p1 = worldToScreen(-ARENA_RADIUS, d);
+          const p2 = worldToScreen(ARENA_RADIUS, d);
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+
+          const p3 = worldToScreen(d, -ARENA_RADIUS);
+          const p4 = worldToScreen(d, ARENA_RADIUS);
+          ctx.beginPath();
+          ctx.moveTo(p3.x, p3.y);
+          ctx.lineTo(p4.x, p4.y);
+          ctx.stroke();
+        }
+
+        if (aConfig.ambientType === 'stars') {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+          for (let star = 0; star < 36; star++) {
+            const sx = ((star * 97) % (ARENA_RADIUS * 1.6)) - ARENA_RADIUS * 0.8;
+            const sy = ((star * 131) % (ARENA_RADIUS * 1.6)) - ARENA_RADIUS * 0.8;
+            const sPos = worldToScreen(sx, sy);
+            ctx.beginPath();
+            ctx.arc(sPos.x, sPos.y, (star % 3 === 0 ? 2 : 1.2), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (aConfig.ambientType === 'divine_motes') {
+          ctx.strokeStyle = 'rgba(254, 240, 138, 0.22)';
+          ctx.lineWidth = 2;
+          [140, 280, 420].forEach(r => {
+            ctx.beginPath();
+            ctx.ellipse(centerScr.x, centerScr.y, r, r * Y_SQUASH, 0, 0, Math.PI * 2);
+            ctx.stroke();
+          });
+        }
+
+        const arenaLight = ctx.createRadialGradient(centerScr.x, centerScr.y, 30, centerScr.x, centerScr.y, ARENA_RADIUS);
+        arenaLight.addColorStop(0, `${aConfig.borderColor}22`);
+        arenaLight.addColorStop(0.55, 'rgba(0,0,0,0)');
+        arenaLight.addColorStop(1, 'rgba(0,0,0,0.42)');
+        ctx.fillStyle = arenaLight;
+        ctx.fillRect(centerScr.x - ARENA_RADIUS, centerScr.y - ARENA_RADIUS, ARENA_RADIUS * 2, ARENA_RADIUS * 2);
+
+        ctx.strokeStyle = `${aConfig.borderColor}66`;
+        ctx.lineWidth = 2;
+        [0.35, 0.68, 0.92].forEach((ratio) => {
+          ctx.beginPath();
+          ctx.ellipse(
+            centerScr.x,
+            centerScr.y,
+            ARENA_RADIUS * ratio,
+            ARENA_RADIUS * ratio * Y_SQUASH,
+            0,
+            0,
+            Math.PI * 2
+          );
+          ctx.stroke();
+        });
+
+        if (boss.state === 'wipe_charging' && activeWipeAttack) {
+          const bx = activeWipeAttack.bossX;
+          const by = activeWipeAttack.bossY;
+
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.14)';
+          ctx.fillRect(centerScr.x - ARENA_RADIUS, centerScr.y - ARENA_RADIUS, ARENA_RADIUS * 2, ARENA_RADIUS * 2);
+
+          currentArenaPillars.forEach(p => {
+            const angle = Math.atan2(p.y - by, p.x - bx);
+            const perpAngle = angle + Math.PI / 2;
+            const effR = p.r + player.radius * 0.75;
+            const farDist = 420;
+
+            const p1w = { x: p.x + Math.cos(perpAngle) * effR, y: p.y + Math.sin(perpAngle) * effR };
+            const p2w = { x: p.x - Math.cos(perpAngle) * effR, y: p.y - Math.sin(perpAngle) * effR };
+            const p3w = {
+              x: p.x + Math.cos(angle) * farDist - Math.cos(perpAngle) * (effR * 1.85),
+              y: p.y + Math.sin(angle) * farDist - Math.sin(perpAngle) * (effR * 1.85)
+            };
+            const p4w = {
+              x: p.x + Math.cos(angle) * farDist + Math.cos(perpAngle) * (effR * 1.85),
+              y: p.y + Math.sin(angle) * farDist + Math.sin(perpAngle) * (effR * 1.85)
+            };
+
+            const s1 = worldToScreen(p1w.x, p1w.y);
+            const s2 = worldToScreen(p2w.x, p2w.y);
+            const s3 = worldToScreen(p3w.x, p3w.y);
+            const s4 = worldToScreen(p4w.x, p4w.y);
+
+            ctx.beginPath();
+            ctx.moveTo(s1.x, s1.y);
+            ctx.lineTo(s2.x, s2.y);
+            ctx.lineTo(s3.x, s3.y);
+            ctx.lineTo(s4.x, s4.y);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(34, 197, 94, 0.28)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(74, 222, 128, 0.75)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            const labelWorld = {
+              x: p.x + Math.cos(angle) * (p.r + 58),
+              y: p.y + Math.sin(angle) * (p.r + 58)
+            };
+            const labelScr = worldToScreen(labelWorld.x, labelWorld.y);
+            ctx.fillStyle = '#86efac';
+            ctx.font = 'bold 10px Cinzel';
+            ctx.textAlign = 'center';
+            ctx.fillText('SAFE SHELTER', labelScr.x, labelScr.y);
+          });
+        }
+
+        for (let i = groundCracks.length - 1; i >= 0; i--) {
+          const gc = groundCracks[i];
+          const gScr = worldToScreen(gc.x, gc.y);
+          ctx.save();
+          ctx.translate(gScr.x, gScr.y);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 45, 45 * Y_SQUASH, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(239, 68, 68, ${gc.alpha * 0.4})`;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.restore();
+
+          gc.life--;
+          gc.alpha = gc.life / 240;
+          if (gc.life <= 0) groundCracks.splice(i, 1);
+        }
+
+        ctx.restore();
+      }
+    }
+
+    /* ==========================================================================
+       DETAILED COILED SWORD BONFIRE & DS3 PROPS
+       ========================================================================== */
+    function drawDetailedBonfire(bf) {
+      const scr = worldToScreen(bf.x, bf.y);
+      ctx.save();
+      ctx.translate(scr.x, scr.y);
+
+      ctx.beginPath();
+      ctx.ellipse(0, 2, 28, 28 * Y_SQUASH, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#1c1917';
+      ctx.fill();
+
+      ctx.fillStyle = '#78716c';
+      [-12, 10, -4, 14].forEach((bx, i) => {
+        const by = (i % 2 === 0 ? -4 : 4) * Y_SQUASH;
+        ctx.fillRect(bx, by, 8, 2.5);
+      });
+
+      ctx.save();
+      ctx.rotate(-0.06);
+      ctx.fillStyle = '#d4d4d8';
+      ctx.beginPath();
+      ctx.arc(0, -42, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(0, -40);
+      for (let y = -40; y <= 0; y += 4) {
+        const spiral = Math.sin(y * 0.4) * 2.5;
+        ctx.lineTo(spiral, y);
+      }
+      ctx.stroke();
+
+      ctx.strokeStyle = '#f97316';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -12);
+      ctx.lineTo(0, 0);
+      ctx.stroke();
+      ctx.restore();
+
+      const flameHeight = 32 + Math.sin(Date.now() * 0.009) * 6;
+      const fg = ctx.createLinearGradient(0, 0, 0, -flameHeight);
+      fg.addColorStop(0, '#f97316');
+      fg.addColorStop(0.5, '#fbbf24');
+      fg.addColorStop(0.85, 'rgba(254, 240, 138, 0.8)');
+      fg.addColorStop(1, 'rgba(254, 240, 138, 0)');
+
+      ctx.fillStyle = fg;
+      ctx.beginPath();
+      ctx.moveTo(-11, 0);
+      ctx.quadraticCurveTo(-16, -flameHeight * 0.55, 0, -flameHeight);
+      ctx.quadraticCurveTo(16, -flameHeight * 0.55, 11, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+
+      if (Math.random() < 0.4) {
+        particles.push({
+          x: bf.x + (Math.random() * 20 - 10),
+          y: bf.y + (Math.random() * 20 - 10),
+          z: 8,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: (Math.random() - 0.5) * 0.5,
+          vz: Math.random() * 2.2 + 1,
+          size: Math.random() * 2.5 + 1,
+          color: '#f97316',
+          alpha: 1,
+          decay: 0.028
+        });
+      }
+    }
+
+    function drawFogGate(fg) {
+      const scr = worldToScreen(fg.x, fg.y);
+      ctx.save();
+      ctx.translate(scr.x, scr.y);
+
+      ctx.fillStyle = '#1c1b22';
+      ctx.fillRect(-50, -82, 18, 82);
+      ctx.fillRect(32, -82, 18, 82);
+      ctx.fillRect(-50, -96, 100, 16);
+
+      const fogGrad = ctx.createLinearGradient(0, 0, 0, -82);
+      fogGrad.addColorStop(0, 'rgba(241, 245, 249, 0.7)');
+      fogGrad.addColorStop(0.5, 'rgba(226, 232, 240, 0.45)');
+      fogGrad.addColorStop(1, 'rgba(203, 213, 225, 0.8)');
+
+      ctx.fillStyle = fogGrad;
+      ctx.fillRect(-32, -82, 64, 82);
+
+      ctx.fillStyle = '#fef08a';
+      ctx.font = '10px Cinzel';
+      ctx.textAlign = 'center';
+      ctx.fillText('FOG GATE', 0, -102);
+
+      ctx.restore();
+    }
+
+    function drawWeaponRack(wr) {
+      const scr = worldToScreen(wr.x, wr.y);
+      ctx.save();
+      ctx.translate(scr.x, scr.y);
+
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 28, 28 * Y_SQUASH, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fill();
+
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(-24, -40, 48, 40);
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-24, -40, 48, 40);
+
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-16, -10);
+      ctx.lineTo(16, -34);
+      ctx.moveTo(-16, -34);
+      ctx.lineTo(16, -10);
+      ctx.stroke();
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = '9px Cinzel';
+      ctx.textAlign = 'center';
+      ctx.fillText('ARSENAL', 0, -46);
+
+      ctx.restore();
+    }
+
+    function drawCrestfallen(cf) {
+      const scr = worldToScreen(cf.x, cf.y);
+      ctx.save();
+      ctx.translate(scr.x, scr.y);
+
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(-16, -14, 32, 14);
+
+      ctx.fillStyle = '#475569';
+      ctx.beginPath();
+      ctx.ellipse(0, -22, 10, 13, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#64748b';
+      ctx.beginPath();
+      ctx.arc(3, -33, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(4, -34, 4, 2);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '8px Cinzel';
+      ctx.textAlign = 'center';
+      ctx.fillText('SILAS', 0, -44);
+
+      ctx.restore();
+    }
+
+    function drawFireKeeper(fk) {
+      const scr = worldToScreen(fk.x, fk.y);
+      ctx.save();
+      ctx.translate(scr.x, scr.y);
+
+      ctx.fillStyle = '#18181b';
+      ctx.beginPath();
+      ctx.moveTo(-8, 0);
+      ctx.lineTo(-4, -32);
+      ctx.lineTo(4, -32);
+      ctx.lineTo(8, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#3f3f46';
+      ctx.stroke();
+
+      ctx.fillStyle = '#f4f4f5';
+      ctx.beginPath();
+      ctx.arc(0, -38, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#a1a1aa';
+      ctx.fillRect(-5, -39, 10, 3);
+
+      ctx.fillStyle = '#fef08a';
+      ctx.font = '8px Cinzel';
+      ctx.textAlign = 'center';
+      ctx.fillText('ELARA', 0, -48);
+
+      ctx.restore();
+    }
+
+    function drawBlacksmith(bm) {
+      const scr = worldToScreen(bm.x, bm.y);
+      ctx.save();
+      ctx.translate(scr.x, scr.y);
+
+      ctx.fillStyle = '#27272a';
+      ctx.fillRect(8, -18, 20, 18);
+      ctx.fillStyle = '#52525b';
+      ctx.fillRect(6, -22, 24, 5);
+
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.ellipse(-10, -22, 11, 15, 0.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#e4e4e7';
+      ctx.beginPath();
+      ctx.arc(-10, -36, 6.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      bm.hammerTimer = (bm.hammerTimer || 0) + 0.05;
+      const hammerUp = Math.sin(bm.hammerTimer) > 0.4;
+      const hY = hammerUp ? -32 : -20;
+
+      ctx.strokeStyle = '#a1a1aa';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-4, -24);
+      ctx.lineTo(12, hY);
+      ctx.stroke();
+
+      ctx.fillStyle = '#3f3f46';
+      ctx.fillRect(10, hY - 3, 7, 7);
+
+      if (!hammerUp && Math.random() < 0.08) {
+        spawnSparks(bm.x + 16, bm.y, 4, '#fbbf24');
+        sound.playAnvilStrike();
+      }
+
+      ctx.fillStyle = '#fde047';
+      ctx.font = '8px Cinzel';
+      ctx.textAlign = 'center';
+      ctx.fillText('THORNE', -10, -46);
+
+      ctx.restore();
+    }
+
+    function drawRuinsProp(prop) {
+      const scr = worldToScreen(prop.x, prop.y);
+      ctx.save();
+      ctx.translate(scr.x, scr.y);
+
+      if (prop.isSteps) {
+        for (let s = 0; s < 3; s++) {
+          const w = prop.width - s * 14;
+          const y = -s * 6;
+          ctx.fillStyle = s % 2 === 0 ? '#1f1e26' : '#272630';
+          ctx.fillRect(-w / 2, y, w, 6);
+          ctx.strokeStyle = '#383540';
+          ctx.strokeRect(-w / 2, y, w, 6);
+        }
+      } else if (prop.isGravestone) {
+        ctx.fillStyle = '#334155';
+        ctx.beginPath();
+        ctx.arc(0, -18, 8, Math.PI, 0);
+        ctx.lineTo(8, 0);
+        ctx.lineTo(-8, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#1e293b';
+        ctx.stroke();
+
+        for (let c = 0; c < (prop.candles || 2); c++) {
+          const cx = -6 + c * 5;
+          ctx.fillStyle = '#fef08a';
+          ctx.fillRect(cx, -2, 2, 4);
+          ctx.fillStyle = '#f97316';
+          const flameY = -4 - Math.sin(Date.now() * 0.01 + c) * 2;
+          ctx.beginPath();
+          ctx.arc(cx + 1, flameY, 1.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (prop.fallen) {
+        ctx.save();
+        ctx.rotate(prop.angle);
+        ctx.fillStyle = '#24232c';
+        ctx.fillRect(-prop.r, -prop.height, prop.r * 2, prop.height);
+        ctx.strokeStyle = '#15141b';
+        ctx.strokeRect(-prop.r, -prop.height, prop.r * 2, prop.height);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = '#24232c';
+        ctx.fillRect(-prop.r, -prop.height, prop.r * 2, prop.height);
+        ctx.strokeStyle = '#15141b';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-prop.r, -prop.height, prop.r * 2, prop.height);
+        ctx.beginPath();
+        ctx.ellipse(0, -prop.height, prop.r, prop.r * Y_SQUASH, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#3f3e4d';
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    function drawPillar(p) {
+      const scr = worldToScreen(p.x, p.y);
+      const pType = (boss.profile && boss.profile.arena && boss.profile.arena.pillarType) || 'iron_furnace';
+      ctx.save();
+      ctx.translate(scr.x, scr.y);
+
+      ctx.beginPath();
+      ctx.ellipse(0, 0, p.r * 1.2, p.r * Y_SQUASH * 1.2, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fill();
+
+      if (pType === 'glacial_prism') {
+        ctx.fillStyle = '#0c4a6e';
+        ctx.fillRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(-p.r + 4, -p.height + 4, p.r * 0.8, p.height - 8);
+        ctx.strokeStyle = '#7dd3fc';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.beginPath();
+        ctx.ellipse(0, -p.height, p.r, p.r * Y_SQUASH, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#bae6fd';
+        ctx.fill();
+        ctx.stroke();
+      } else if (pType === 'magma_spire') {
+        ctx.fillStyle = '#1c1917';
+        ctx.fillRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.strokeStyle = '#f97316';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-p.r * 0.4, 0);
+        ctx.lineTo(p.r * 0.2, -p.height * 0.5);
+        ctx.lineTo(-p.r * 0.3, -p.height);
+        ctx.stroke();
+        ctx.strokeStyle = '#ea580c';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.beginPath();
+        ctx.ellipse(0, -p.height, p.r, p.r * Y_SQUASH, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#ea580c';
+        ctx.fill();
+      } else if (pType === 'twisted_oak') {
+        ctx.fillStyle = '#271c14';
+        ctx.fillRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.strokeStyle = '#15803d';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, -p.height * 0.5, p.r * 0.85, 0, Math.PI * 1.5);
+        ctx.stroke();
+        ctx.fillStyle = '#166534';
+        ctx.beginPath();
+        ctx.ellipse(0, -p.height, p.r * 1.1, p.r * Y_SQUASH * 1.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (pType === 'lightning_pylon') {
+        ctx.fillStyle = '#422006';
+        ctx.fillRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.fillStyle = '#ca8a04';
+        ctx.fillRect(-p.r + 3, -p.height + 4, p.r * 0.7, p.height - 8);
+        ctx.strokeStyle = '#fef08a';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.beginPath();
+        ctx.arc(0, -p.height - 6, 9, 0, Math.PI * 2);
+        ctx.fillStyle = '#fde047';
+        ctx.shadowColor = '#facc15';
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      } else if (pType === 'obsidian_obelisk') {
+        ctx.fillStyle = '#1e1035';
+        ctx.fillRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.strokeStyle = '#a855f7';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.fillStyle = '#c084fc';
+        ctx.font = '14px serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('⛬', 0, -p.height * 0.5);
+        ctx.beginPath();
+        ctx.ellipse(0, -p.height, p.r, p.r * Y_SQUASH, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#3b0764';
+        ctx.fill();
+        ctx.stroke();
+      } else if (pType === 'sand_monument') {
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(-p.r, -p.height, p.r * 0.8, p.height);
+        ctx.strokeStyle = '#d97706';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.beginPath();
+        ctx.ellipse(0, -p.height, p.r, p.r * Y_SQUASH, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#b45309';
+        ctx.fill();
+      } else if (pType === 'void_monolith') {
+        ctx.fillStyle = '#0f0728';
+        ctx.fillRect(-p.r, -p.height - 6, p.r * 2, p.height);
+        ctx.strokeStyle = '#e879f9';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-p.r, -p.height - 6, p.r * 2, p.height);
+        ctx.fillStyle = '#f0abfc';
+        ctx.beginPath();
+        ctx.arc(0, -p.height * 0.5 - 3, 6, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (pType === 'bone_totem') {
+        ctx.fillStyle = '#2e0814';
+        ctx.fillRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.strokeStyle = '#be123c';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.fillStyle = '#fecdd3';
+        ctx.fillRect(-8, -p.height - 10, 16, 10);
+      } else if (pType === 'divine_column') {
+        ctx.fillStyle = '#1c1917';
+        ctx.fillRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(-p.r + 4, -p.height, 4, p.height);
+        ctx.fillRect(p.r - 8, -p.height, 4, p.height);
+        ctx.strokeStyle = '#eab308';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.beginPath();
+        ctx.arc(0, -p.height - 6, p.r * 0.7, 0, Math.PI * 2);
+        ctx.strokeStyle = '#fef08a';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = '#24232c';
+        ctx.fillRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.fillStyle = '#34333e';
+        ctx.fillRect(-p.r, -p.height, p.r * 0.75, p.height);
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(-p.r, -p.height, p.r * 2, p.height);
+        ctx.beginPath();
+        ctx.ellipse(0, -p.height, p.r, p.r * Y_SQUASH, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#b91c1c';
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    /* ==========================================================================
+       Y-SORTING DEPTH BUFFER
+       ========================================================================== */
+    function renderWorldObjects() {
+      const renderQueue = [
+        { type: 'player', y: player.y, draw: () => player.draw() }
+      ];
+
+      remotePlayers.forEach((rp) => {
+        renderQueue.push({ type: "ally", y: rp.y, draw: () => drawRemotePlayer(rp) });
+      });
+
+      if (scene === 'arena') {
+        renderQueue.push({ type: 'boss', y: boss.y, draw: () => boss.draw() });
+        currentArenaPillars.forEach(p => {
+          renderQueue.push({ type: 'pillar', y: p.y, draw: () => drawPillar(p) });
+        });
+
+        enemyMinions.forEach(m => {
+          renderQueue.push({
+            type: 'minion',
+            y: m.y,
+            draw: () => {
+              const mScr = worldToScreen(m.x, m.y);
+              ctx.save();
+              ctx.translate(mScr.x, mScr.y);
+              ctx.beginPath();
+              ctx.ellipse(0, 0, m.r, m.r * Y_SQUASH, 0, 0, Math.PI * 2);
+              ctx.fillStyle = 'rgba(0,0,0,0.5)';
+              ctx.fill();
+              ctx.beginPath();
+              ctx.arc(0, -12, m.r * 0.8, 0, Math.PI * 2);
+              ctx.fillStyle = m.color;
+              ctx.fill();
+              ctx.strokeStyle = '#000';
+              ctx.lineWidth = 2;
+              ctx.stroke();
+              ctx.fillStyle = '#ef4444';
+              ctx.fillRect(-m.r, -24, (m.hp / m.maxHp) * (m.r * 2), 3);
+              ctx.restore();
+            }
+          });
+        });
+      } else {
+        renderQueue.push({ type: 'bonfire', y: sanctuaryProps.bonfire.y, draw: () => drawDetailedBonfire(sanctuaryProps.bonfire) });
+        renderQueue.push({ type: 'fogGate', y: sanctuaryProps.fogGate.y, draw: () => drawFogGate(sanctuaryProps.fogGate) });
+        renderQueue.push({ type: 'weaponRack', y: sanctuaryProps.weaponRack.y, draw: () => drawWeaponRack(sanctuaryProps.weaponRack) });
+
+        renderQueue.push({ type: 'crestfallen', y: sanctuaryProps.crestfallen.y, draw: () => drawCrestfallen(sanctuaryProps.crestfallen) });
+        renderQueue.push({ type: 'fireKeeper', y: sanctuaryProps.fireKeeper.y, draw: () => drawFireKeeper(sanctuaryProps.fireKeeper) });
+        renderQueue.push({ type: 'blacksmith', y: sanctuaryProps.blacksmith.y, draw: () => drawBlacksmith(sanctuaryProps.blacksmith) });
+
+        shrineRuins.forEach(ruin => {
+          renderQueue.push({ type: 'ruin', y: ruin.y, draw: () => drawRuinsProp(ruin) });
+        });
+      }
+
+      renderQueue.sort((a, b) => a.y - b.y);
+      renderQueue.forEach(item => item.draw());
+    }
+
+    /* ==========================================================================
+       INTERACTION & NPC DIALOGUE SYSTEM
+       ========================================================================== */
+    function checkSanctuaryInteractions() {
+      if (scene !== 'sanctuary') {
+        interactPrompt.classList.add('hidden');
+        activeInteractable = null;
+        return;
+      }
+
+      if (!dialogueBox.classList.contains('hidden')) {
+        interactPrompt.classList.add('hidden');
+        return;
+      }
+
+      let closest = null;
+      let closestDist = 9999;
+
+      for (const [key, prop] of Object.entries(sanctuaryProps)) {
+        const d = Math.hypot(player.x - prop.x, player.y - prop.y);
+        if (d < prop.r + 38 && d < closestDist) {
+          closest = { key, ...prop };
+          closestDist = d;
+        }
+      }
+
+      if (closest) {
+        activeInteractable = closest;
+        interactActionText.textContent = closest.label;
+        interactPrompt.classList.remove('hidden');
+      } else {
+        activeInteractable = null;
+        interactPrompt.classList.add('hidden');
+      }
+    }
+
+    function handleInteraction(prop) {
+      if (!prop) return;
+
+      if (prop.key === 'bonfire') {
+        player.hp = player.maxHp;
+        player.stam = player.maxStam;
+        player.estusCharges = player.maxEstus;
+        player.isResting = true;
+        player.restTimer = 45;
+        renderEstusUI();
+        sound.playBonfireRest();
+        spawnHealParticles(player.x, player.y);
+        locationBadge.textContent = 'Bonfire Lit • Restored';
+        setTimeout(() => locationBadge.textContent = 'Firelink Shrine', 2200);
+      } else if (prop.key === 'fogGate') {
+        enterBossArena();
+      } else if (prop.key === 'weaponRack') {
+        toggleArsenalModal(true);
+      } else if (prop.dialogues) {
+        openNpcDialogue(prop);
+      }
+    }
+
+    function openNpcDialogue(npc) {
+      activeDialogueNpc = npc;
+      npcNameElem.textContent = npc.name;
+      npcTextElem.textContent = `"${npc.dialogues[npc.dialogueIdx]}"`;
+      dialogueBox.classList.remove('hidden');
+      interactPrompt.classList.add('hidden');
+      const isThorne = npc.name === 'Forge-Master Thorne';
+      sound.playNpcDialogueSound(npc.pitch || 300, isThorne ? 0.045 : 0.12);
+    }
+
+    function advanceDialogue() {
+      if (!activeDialogueNpc) return;
+      activeDialogueNpc.dialogueIdx = (activeDialogueNpc.dialogueIdx + 1) % activeDialogueNpc.dialogues.length;
+      if (activeDialogueNpc.dialogueIdx === 0) {
+        closeDialogue();
+      } else {
+        npcTextElem.textContent = `"${activeDialogueNpc.dialogues[activeDialogueNpc.dialogueIdx]}"`;
+        const isThorne = activeDialogueNpc.name === 'Forge-Master Thorne';
+        sound.playNpcDialogueSound(activeDialogueNpc.pitch || 300, isThorne ? 0.045 : 0.12);
+      }
+    }
+
+    function closeDialogue() {
+      dialogueBox.classList.add('hidden');
+      activeDialogueNpc = null;
+    }
+
+    /* ==========================================================================
+       SCENE TRANSITIONS: ENTER ARENA & RETURN TO SANCTUARY
+       ========================================================================== */
+    function enterBossArena() {
+      closeDialogue();
+      scene = 'arena';
+      gameState = 'playing';
+
+      player.x = 0;
+      player.y = 260;
+      player.isRolling = false;
+      player.isAttacking = false;
+      player.isHealing = false;
+      player.isParrying = false;
+      player.isResting = false;
+
+      boss.loadBoss(currentBossIndex);
+
+      bossHud.classList.remove('hidden');
+      bossHud.classList.add('flex');
+      const arenaConf = (boss.profile && boss.profile.arena) ? boss.profile.arena : {};
+      locationBadge.textContent = arenaConf.locationName || `Arena of the Sovereign`;
+      bossProgressTag.textContent = `LORD ${currentBossIndex + 1} OF 10`;
+
+      particles = [];
+      shockwaves = [];
+      groundCracks = [];
+      floatingTexts = [];
+      banner.classList.add('hidden');
+      centerPrompt.classList.add('hidden');
+      sound.playSlam();
+      sound.startBGM('boss');
+      if (!coop.applyingRemote) {
+        coop.send({
+          type: "scene_change",
+          scene: "arena",
+          bossIndex: currentBossIndex,
+        });
+      }
+    }
+
+    function returnToSanctuary() {
+      closeDialogue();
+      scene = 'sanctuary';
+      gameState = 'playing';
+
+      player.x = 0;
+      player.y = 120;
+      player.hp = player.maxHp;
+      player.stam = player.maxStam;
+      player.estusCharges = player.maxEstus;
+      player.isRolling = false;
+      player.isAttacking = false;
+      player.isHealing = false;
+      player.isParrying = false;
+      player.isResting = false;
+
+      bossHud.classList.add('hidden');
+      bossHud.classList.remove('flex');
+      wipeWarning.classList.add('hidden');
+      activeWipeAttack = null;
+      locationBadge.textContent = 'Firelink Shrine';
+      bossProgressTag.textContent = `TARGET: ${BOSS_ROSTER[currentBossIndex].name} (${currentBossIndex + 1}/10)`;
+
+      particles = [];
+      shockwaves = [];
+      floatingTexts = [];
+      banner.classList.add('hidden');
+      centerPrompt.classList.add('hidden');
+      renderEstusUI();
+      sound.playBonfireRest();
+      sound.startBGM('sanctuary');
+      if (!coop.applyingRemote) {
+        coop.send({ type: "scene_change", scene: "sanctuary" });
+      }
+    }
+
+    /* ==========================================================================
+       VICTORY / DEFEAT LOGIC & WEAPON UNLOCKS
+       ========================================================================== */
+    function endGame(victory) {
+      gameState = victory ? 'victory' : 'defeat';
+      wipeWarning.classList.add('hidden');
+      activeWipeAttack = null;
+      banner.classList.remove('hidden');
+      banner.classList.add('fade-banner');
+
+      if (victory) {
+        sound.playBonfireRest();
+        const defeatedBoss = BOSS_ROSTER[currentBossIndex];
+        const unlockedWep = WEAPONS.find(w => w.id === defeatedBoss.weaponDropId);
+
+        if (unlockedWep && !unlockedWep.unlocked) {
+          unlockedWep.unlocked = true;
+          bannerReward.textContent = `🏆 RELIC FORGED: ${unlockedWep.name}!`;
+        } else {
+          bannerReward.textContent = '';
+        }
+
+        bannerTitle.textContent = 'HEIR OF FIRE DEFEATED';
+        bannerTitle.className = 'font-decorative text-3xl sm:text-5xl uppercase tracking-[6px] font-black text-amber-400 drop-shadow-[0_0_25px_rgba(245,158,11,0.85)]';
+        bannerSubtitle.textContent = 'Returning to Firelink Shrine in 3 seconds...';
+
+        setTimeout(() => {
+          if (currentBossIndex < BOSS_ROSTER.length - 1) {
+            currentBossIndex++;
+          } else {
+            currentBossIndex = 0;
+          }
+          returnToSanctuary();
+        }, 3400);
+      } else {
+        bannerTitle.textContent = 'YOU DIED';
+        bannerTitle.className = 'font-decorative text-4xl sm:text-6xl uppercase tracking-[8px] font-black text-red-600 drop-shadow-[0_0_30px_rgba(220,38,38,0.95)]';
+        bannerSubtitle.textContent = 'Thy flame extinguished • Returning to Firelink...';
+        bannerReward.textContent = '';
+
+        setTimeout(() => {
+          returnToSanctuary();
+        }, 3000);
+      }
+    }
+
+    /* ==========================================================================
+       WEAPON ARSENAL UI
+       ========================================================================== */
+    function renderArsenalUI() {
+      arsenalGrid.innerHTML = '';
+      let unlockedTotal = 0;
+
+      WEAPONS.forEach((w) => {
+        if (w.unlocked) unlockedTotal++;
+
+        const card = document.createElement('div');
+        const isEquipped = currentWeapon.id === w.id;
+
+        card.className = `p-3 rounded-lg border transition-all cursor-pointer flex flex-col justify-between ${
+          w.unlocked
+            ? isEquipped
+              ? 'bg-amber-950/40 border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
+              : 'bg-stone-900/80 border-stone-800 hover:border-stone-600'
+            : 'bg-stone-950/80 border-stone-900 opacity-40 cursor-not-allowed'
+        }`;
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-bold text-xs uppercase tracking-wider ${isEquipped ? 'text-amber-300' : 'text-stone-200'}">
+                ${w.name}
+              </span>
+              <span class="text-sm">${w.icon}</span>
+            </div>
+            <div class="text-[10px] text-stone-400 font-mono mb-2">${w.type} • ${w.source}</div>
+            <p class="text-[11px] text-stone-300 font-sans leading-tight mb-2">${w.desc}</p>
+          </div>
+          <div class="flex justify-between items-center text-[10px] font-mono border-t border-stone-800/80 pt-1.5 mt-1 text-stone-400">
+            <span>DMG: <b class="text-red-400">${w.damage}</b></span>
+            <span>RNG: <b class="text-blue-400">${w.reach}</b></span>
+            <span>STAM: <b class="text-green-400">${w.stamCost}</b></span>
+          </div>
+        `;
+
+        if (w.unlocked) {
+          card.onclick = () => {
+            equipWeapon(w);
+            renderArsenalUI();
+          };
+        }
+
+        arsenalGrid.appendChild(card);
+      });
+
+      unlockedCount.textContent = unlockedTotal;
+    }
+
+    function equipWeapon(w) {
+      currentWeapon = w;
+      hudWeaponName.textContent = w.name;
+      hudWeaponType.textContent = `${w.type} / DMG: ${w.damage}`;
+      hudWeaponIcon.textContent = w.icon;
+      sound.playSwordSwing(440, 0.1);
+    }
+
+    function toggleArsenalModal(show) {
+      const willShow = show !== undefined ? show : arsenalModal.classList.contains('hidden');
+      if (willShow) {
+        renderArsenalUI();
+        arsenalModal.classList.remove('hidden');
+      } else {
+        arsenalModal.classList.add('hidden');
+      }
+    }
+
+    /* ==========================================================================
+       UI UPDATES
+       ========================================================================== */
+    function renderEstusUI() {
+      estusContainer.innerHTML = '';
+      for (let i = 0; i < player.maxEstus; i++) {
+        const available = i < player.estusCharges;
+        const flask = document.createElement('div');
+        flask.className = `w-4 h-5 rounded-t-sm rounded-b-md border ${
+          available
+            ? 'bg-amber-500 border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.85)]'
+            : 'bg-stone-900 border-stone-800 opacity-30'
+        }`;
+        estusContainer.appendChild(flask);
+      }
+      estusCountSpan.textContent = player.estusCharges;
+    }
+
+    function updateHUD() {
+      hpBar.style.width = `${(player.hp / player.maxHp) * 100}%`;
+      hpTxt.textContent = `${Math.ceil(player.hp)}`;
+      stamBar.style.width = `${(player.stam / player.maxStam) * 100}%`;
+      stamTxt.textContent = `${Math.ceil(player.stam)}`;
+
+      if (scene === 'arena') {
+        bossHpBar.style.width = `${(boss.hp / boss.maxHp) * 100}%`;
+        bossHpCount.textContent = `${Math.ceil(boss.hp)} / ${boss.maxHp}`;
+        bossPoiseBar.style.width = `${Math.min(100, (boss.poise / boss.maxPoise) * 100)}%`;
+      }
+    }
+/* ==========================================================================
+   CO-OP WEBSOCKET CLIENT (Step 3A: Rooms & Player Position Sync)
+   ========================================================================== */
+const remotePlayers = new Map();
+
+const coop = {
+  ws: null,
+  playerId: null,
+  hostId: null,
+  roomCode: null,
+  tick: 0,
+  applyingRemote: false,
+
+  isConnected() {
+    return Boolean(this.ws && this.ws.readyState === WebSocket.OPEN && this.roomCode);
+  },
+
+  isHost() {
+    return !this.isConnected() || this.hostId === this.playerId;
+  },
+
+  connect(url) {
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve, reject) => {
+      const socket = new WebSocket(url);
+      this.ws = socket;
+
+      socket.onopen = () => {
+        setCoopStatus("Connected • Not in room");
+        resolve();
+      };
+
+      socket.onerror = (err) => {
+        setCoopStatus("Cannot reach ws://localhost:8080");
+        reject(err);
+      };
+
+      socket.onclose = () => {
+        this.roomCode = null;
+        this.hostId = null;
+        remotePlayers.clear();
+        setCoopStatus("Solo Mode");
+      };
+
+      socket.onmessage = (ev) => {
+        let msg;
+        try {
+          msg = JSON.parse(ev.data);
+        } catch {
+          return;
+        }
+        this.onMessage(msg);
+      };
+    });
+  },
+
+  async createRoom() {
+    const url = getCoopServerUrl();
+    if (!url) return;
+    await this.connect(url);
+    this.ws.send(JSON.stringify({ type: "create_room" }));
+  },
+
+  async joinRoom(code) {
+    const clean = String(code || "").trim().toUpperCase();
+    if (!clean) return;
+    const url = getCoopServerUrl();
+    if (!url) return;
+    await this.connect(url);
+    this.ws.send(JSON.stringify({ type: "join_room", roomCode: clean }));
+  },
+
+  send(message) {
+    if (!this.isConnected()) return;
+    this.ws.send(JSON.stringify(message));
+  },
+
+  sendAction(action) {
+    if (this.applyingRemote) return;
+    this.send({
+      type: "player_action",
+      action,
+      state: {
+        weaponId: currentWeapon.id,
+        attackAngle: player.attackAngle,
+        facingAngle: player.facingAngle,
+      },
+    });
+  },
+
+  sendCombat(kind, data) {
+    if (this.applyingRemote) return;
+    this.send({ type: "combat_event", kind, data });
+  },
+
+  onMessage(msg) {
+    if (msg.type === "welcome") {
+      this.playerId = msg.playerId;
+    } else if (msg.type === "room_joined" || msg.type === "room_roster") {
+      this.roomCode = msg.roomCode;
+      this.hostId = msg.hostId;
+      const ids = new Set(msg.players || []);
+
+      for (const id of remotePlayers.keys()) {
+        if (!ids.has(id)) remotePlayers.delete(id);
+      }
+      for (const id of ids) {
+        if (id !== this.playerId && !remotePlayers.has(id)) {
+          remotePlayers.set(id, {
+            x: player.x,
+            y: player.y,
+            facingAngle: 0,
+            isRolling: false,
+            rollTimer: 0,
+            rollDir: { x: 0, y: 0 },
+            isAttacking: false,
+            attackTimer: 0,
+            attackDuration: 20,
+            attackAngle: 0,
+            isParrying: false,
+            parryTimer: 0,
+            isHealing: false,
+            weaponId: "w0",
+          });
+        }
+      }
+      rescaleBossForCoop();
+
+      const role = this.isHost() ? "HOST" : "MEMBER";
+      setCoopStatus(`Room ${this.roomCode} [${role}] • ${ids.size}/4`);
+    } else if (msg.type === "player_left") {
+      remotePlayers.delete(msg.playerId);
+      rescaleBossForCoop();
+      if (this.roomCode) {
+        setCoopStatus(`Room ${this.roomCode} • ${remotePlayers.size + 1}/4`);
+      }
+    } else if (msg.type === "player_state" && msg.senderId !== this.playerId) {
+      const target = remotePlayers.get(msg.senderId) || {};
+      remotePlayers.set(msg.senderId, { ...target, ...msg.state });
+    } else if (msg.type === "player_action" && msg.senderId !== this.playerId) {
+      const target = remotePlayers.get(msg.senderId) || {};
+      remotePlayers.set(msg.senderId, {
+        ...target,
+        ...msg.state,
+        action: msg.action,
+        actionTick: this.tick,
+      });
+    } else if (msg.type === "combat_event" && msg.senderId !== this.playerId) {
+      this.applyCombatEvent(msg);
+    } else if (msg.type === "scene_change" && msg.senderId !== this.playerId) {
+      this.applySceneChange(msg);
+    } else if (msg.type === "world_sync" && msg.senderId !== this.playerId) {
+      this.applyWorldSync(msg.state);
+    } else if (msg.type === "error") {
+      setCoopStatus(msg.message || "Room error");
+    }
+  },
+
+  applyCombatEvent(msg) {
+    if (!msg.data || scene !== "arena" || gameState !== "playing") return;
+
+    if (msg.kind === "boss_hit") {
+      const damage = Number(msg.data.damage);
+      const poiseDamage = Number(msg.data.poiseDamage);
+      if (Number.isFinite(damage) && Number.isFinite(poiseDamage)) {
+        boss.takeDamage(damage, poiseDamage);
+      }
+    } else if (msg.kind === "minion_hit") {
+      const index = Number(msg.data.index);
+      const damage = Number(msg.data.damage);
+      const minion = enemyMinions[index];
+      if (minion && Number.isFinite(damage)) {
+        minion.hp -= damage;
+        if (minion.hp <= 0) enemyMinions.splice(index, 1);
+      }
+    }
+  },
+
+  applySceneChange(msg) {
+    if (msg.scene !== "arena" && msg.scene !== "sanctuary") return;
+    this.applyingRemote = true;
+    try {
+      if (msg.scene === "arena" && scene !== "arena") {
+        currentBossIndex = Math.max(0, Math.min(BOSS_ROSTER.length - 1, Number(msg.bossIndex) || 0));
+        enterBossArena();
+      } else if (msg.scene === "sanctuary" && scene !== "sanctuary") {
+        returnToSanctuary();
+      }
+    } finally {
+      this.applyingRemote = false;
+    }
+  },
+
+  applyWorldSync(state) {
+    if (!state || scene !== state.scene || this.isHost() || scene !== "arena" || !state.boss) return;
+
+    const values = ["x", "y", "hp", "maxHp", "poise", "phase", "timer"];
+    values.forEach((key) => {
+      if (Number.isFinite(state.boss[key])) boss[key] = state.boss[key];
+    });
+    if (typeof state.boss.state === "string") boss.state = state.boss.state;
+    if (typeof state.boss.currentAttackType === "string") {
+      boss.currentAttackType = state.boss.currentAttackType;
+    }
+    if (Array.isArray(state.projectiles)) bossProjectiles = state.projectiles;
+    if (Array.isArray(state.minions)) enemyMinions = state.minions;
+    if (Array.isArray(state.hazards)) groundHazards = state.hazards;
+  },
+
+  syncPosition() {
+    if (!this.isConnected()) return;
+    this.tick++;
+    if (this.tick % 2 !== 0) return; // ~30 times/sec
+
+    this.send({
+      type: "player_state",
+      state: {
+        x: player.x,
+        y: player.y,
+        hp: player.hp,
+        maxHp: player.maxHp,
+        stam: player.stam,
+        maxStam: player.maxStam,
+        facingAngle: player.facingAngle,
+        isRolling: player.isRolling,
+        rollTimer: player.rollTimer,
+        rollDir: player.rollDir,
+        isAttacking: player.isAttacking,
+        attackTimer: player.attackTimer,
+        attackDuration: player.attackDuration,
+        attackAngle: player.attackAngle,
+        isParrying: player.isParrying,
+        parryTimer: player.parryTimer,
+        isHealing: player.isHealing,
+        weaponId: currentWeapon.id,
+      },
+    });
+
+    if (this.isHost() && this.tick % 6 === 0 && scene === "arena") {
+      this.send({
+        type: "world_sync",
+        state: {
+          scene,
+          boss: {
+            x: boss.x,
+            y: boss.y,
+            hp: boss.hp,
+            maxHp: boss.maxHp,
+            poise: boss.poise,
+            phase: boss.phase,
+            state: boss.state,
+            timer: boss.timer,
+            currentAttackType: boss.currentAttackType,
+          },
+          projectiles: bossProjectiles,
+          minions: enemyMinions,
+          hazards: groundHazards,
+        },
+      });
+    }
+  },
+};
+
+function getCoopPlayerCount() {
+  return coop.isConnected() ? Math.max(1, remotePlayers.size + 1) : 1;
+}
+
+function getCoopBossHpMultiplier() {
+  return [1, 1.75, 2.4, 3][Math.min(3, getCoopPlayerCount() - 1)];
+}
+
+function getCoopEnemyDamageMultiplier() {
+  return [1, 1.1, 1.2, 1.3][Math.min(3, getCoopPlayerCount() - 1)];
+}
+
+function rescaleBossForCoop() {
+  if (!boss || !boss.profile || scene !== "arena") return;
+  const previousMaxHp = boss.maxHp;
+  const nextMaxHp = Math.round(boss.profile.hp * 2 * getCoopBossHpMultiplier());
+  if (previousMaxHp === nextMaxHp) return;
+
+  const healthRatio = previousMaxHp > 0 ? boss.hp / previousMaxHp : 1;
+  boss.maxHp = nextMaxHp;
+  boss.hp = Math.max(0, Math.min(nextMaxHp, Math.round(nextMaxHp * healthRatio)));
+  bossHpCount.textContent = `${Math.ceil(boss.hp)} / ${boss.maxHp}`;
+  bossHpBar.style.width = `${(boss.hp / boss.maxHp) * 100}%`;
+}
+
+function getCoopServerUrl() {
+  const input = document.getElementById("coop-server-input");
+  const raw = input ? input.value.trim() : "";
+  const candidate = raw || "ws://localhost:8080";
+  const normalized = /^wss?:\/\//i.test(candidate) ? candidate : `ws://${candidate}`;
+
+  try {
+    const url = new URL(normalized);
+    if (url.protocol !== "ws:" && url.protocol !== "wss:") throw new Error("WebSocket URL required");
+    if (!url.hostname) throw new Error("Server address required");
+    return url.toString().replace(/\/$/, "");
+  } catch (error) {
+    setCoopStatus(error.message || "Invalid co-op server address");
+    return null;
+  }
+}
+
+function setCoopStatus(text) {
+  const el = document.getElementById("coop-status");
+  if (el) el.textContent = text;
+}
+
+function drawRemotePlayer(rp) {
+  const scr = worldToScreen(rp.x, rp.y);
+  const weapon = WEAPONS.find((w) => w.id === rp.weaponId) || WEAPONS[0];
+  ctx.save();
+  ctx.translate(scr.x, scr.y);
+
+  // Shadow
+  ctx.beginPath();
+  ctx.ellipse(0, 2, player.radius * 1.05, player.radius * Y_SQUASH * 0.85, 0, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+  ctx.fill();
+
+  // Body (cyan tint so you can tell co-op partner apart)
+  ctx.beginPath();
+  ctx.ellipse(0, -16, 11, 15, 0, 0, Math.PI * 2);
+  ctx.fillStyle = "#0284c7";
+  ctx.fill();
+  ctx.strokeStyle = "#e0f2fe";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Head
+  ctx.beginPath();
+  ctx.arc(0, -32, 7.5, 0, Math.PI * 2);
+  ctx.fillStyle = "#7dd3fc";
+  ctx.fill();
+  ctx.strokeStyle = "#0f172a";
+  ctx.stroke();
+
+  if (Number.isFinite(rp.hp) && Number.isFinite(rp.maxHp) && rp.maxHp > 0) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillRect(-18, -49, 36, 3);
+    ctx.fillStyle = "#22c55e";
+    ctx.fillRect(-18, -49, 36 * Math.max(0, Math.min(1, rp.hp / rp.maxHp)), 3);
+  }
+
+  if (rp.isParrying) {
+    ctx.beginPath();
+    ctx.arc(0, -16, 29, -Math.PI * 0.45, Math.PI * 0.45);
+    ctx.strokeStyle = "#38bdf8";
+    ctx.lineWidth = 4;
+    ctx.stroke();
+  }
+
+  ctx.save();
+  ctx.translate(0, -14);
+  const angle = Number.isFinite(rp.facingAngle) ? rp.facingAngle : 0;
+  ctx.strokeStyle = weapon.color;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(Math.cos(angle) * 5, Math.sin(angle) * 5 * Y_SQUASH);
+  ctx.lineTo(Math.cos(angle) * Math.min(weapon.reach, 62), Math.sin(angle) * Math.min(weapon.reach, 62) * Y_SQUASH);
+  ctx.stroke();
+  if (rp.isAttacking) {
+    ctx.beginPath();
+    ctx.ellipse(
+      0,
+      0,
+      weapon.reach,
+      weapon.reach * Y_SQUASH,
+      Number.isFinite(rp.attackAngle) ? rp.attackAngle : angle,
+      -Math.PI / 3,
+      Math.PI / 3
+    );
+    ctx.strokeStyle = weapon.slashColor;
+    ctx.lineWidth = weapon.reach > 90 ? 10 : 7;
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.restore();
+}
+    /* ==========================================================================
+       MAIN ANIMATION LOOP
+       ========================================================================== */
+    function animate() {
+      if (shakeTimer > 0) {
+        container.classList.add('shake');
+        shakeTimer--;
+      } else {
+        container.classList.remove('shake');
+      }
+
+      if (hitstopTimer > 0) {
+        hitstopTimer--;
+      } else if (gameState === 'playing') {
+        player.update();
+        camera.update();
+
+        if (scene === 'arena') {
+          boss.update();
+
+          for (let i = shockwaves.length - 1; i >= 0; i--) {
+            const sw = shockwaves[i];
+            sw.radius += sw.speed;
+            sw.alpha = 1 - sw.radius / sw.maxRadius;
+
+            if (!sw.hitPlayer && sw.damage > 0) {
+              const dx = (player.x - sw.x);
+              const dy = (player.y - sw.y);
+              const dist = Math.hypot(dx, dy);
+              if (Math.abs(dist - sw.radius) < 22) {
+                const blocked = sw.respectsPillars && isBlockedByPillars(sw.x, sw.y, player.x, player.y);
+                if (!blocked) {
+                  player.takeDamage(sw.damage, true, 'boss');
+                }
+                sw.hitPlayer = true;
+              }
+            }
+
+            if (sw.radius >= sw.maxRadius) shockwaves.splice(i, 1);
+          }
+
+          for (let i = bossProjectiles.length - 1; i >= 0; i--) {
+            const proj = bossProjectiles[i];
+
+            if (proj.homing && !proj.deflected) {
+              const ang = Math.atan2(player.y - proj.y, player.x - proj.x);
+              proj.vx += Math.cos(ang) * 0.22;
+              proj.vy += Math.sin(ang) * 0.22;
+              const spd = Math.hypot(proj.vx, proj.vy);
+              if (spd > 5.5) {
+                proj.vx = (proj.vx / spd) * 5.5;
+                proj.vy = (proj.vy / spd) * 5.5;
+              }
+            }
+
+            if (proj.isBoomerang && proj.life < 75 && !proj.deflected) {
+              const bang = Math.atan2(boss.y - proj.y, boss.x - proj.x);
+              proj.vx = Math.cos(bang) * 6.5;
+              proj.vy = Math.sin(bang) * 6.5;
+            }
+
+            proj.x += proj.vx;
+            proj.y += proj.vy;
+            proj.life--;
+
+            let absorbed = false;
+            for (const p of currentArenaPillars) {
+              if (Math.hypot(proj.x - p.x, proj.y - p.y) < p.r + proj.r) {
+                spawnSparks(proj.x, proj.y, 6, '#94a3b8');
+                absorbed = true;
+                break;
+              }
+            }
+
+            if (!absorbed && proj.deflected) {
+              if (Math.hypot(proj.x - boss.x, proj.y - boss.y) < boss.radius + proj.r + 10) {
+                boss.takeDamage(65, 38);
+                spawnSparks(proj.x, proj.y, 24, '#38bdf8');
+                sound.playHit();
+                absorbed = true;
+              }
+            } else if (!absorbed && Math.hypot(proj.x - player.x, proj.y - player.y) < player.radius + proj.r + (player.isParrying ? 18 : 0)) {
+              if (player.isParrying) {
+                player.onSuccessfulParry('projectile');
+                proj.deflected = true;
+                proj.homing = false;
+                proj.color = '#38bdf8';
+                proj.life = 140;
+                const toBoss = Math.atan2(boss.y - proj.y, boss.x - proj.x);
+                const speed = Math.max(9.5, Math.hypot(proj.vx, proj.vy) * 1.8);
+                proj.vx = Math.cos(toBoss) * speed;
+                proj.vy = Math.sin(toBoss) * speed;
+              } else {
+                player.takeDamage(proj.damage, false, 'projectile');
+                absorbed = true;
+              }
+            }
+
+            if (absorbed || proj.life <= 0) {
+              bossProjectiles.splice(i, 1);
+            }
+          }
+
+          // Arena Ambient Weather Effects
+          if (boss.profile && boss.profile.arena && Math.random() < 0.4) {
+            const amb = boss.profile.arena;
+            const rx = (Math.random() * ARENA_RADIUS * 1.8) - ARENA_RADIUS * 0.9;
+            const ry = (Math.random() * ARENA_RADIUS * 1.8) - ARENA_RADIUS * 0.9;
+            if (amb.ambientType === 'snow') {
+              particles.push({
+                x: rx, y: ry, z: 60,
+                vx: -1.2, vy: 0.8, vz: -1.5,
+                size: Math.random() * 2.5 + 1.5,
+                color: '#e0f2fe', alpha: 0.85, decay: 0.012
+              });
+            } else if (amb.ambientType === 'fire_sparks' || amb.ambientType === 'embers') {
+              particles.push({
+                x: rx, y: ry, z: 2,
+                vx: (Math.random() - 0.5) * 1.2, vy: (Math.random() - 0.5) * 1.2, vz: Math.random() * 2.8 + 1.2,
+                size: Math.random() * 3 + 1,
+                color: amb.ambientColor || '#f97316', alpha: 1, decay: 0.025
+              });
+            } else if (amb.ambientType === 'sand') {
+              particles.push({
+                x: rx, y: ry, z: 4,
+                vx: 5.5 + Math.random() * 3, vy: (Math.random() - 0.5) * 1.5, vz: 0.2,
+                size: Math.random() * 2 + 1,
+                color: '#f59e0b', alpha: 0.7, decay: 0.02
+              });
+            } else if (amb.ambientType === 'spores') {
+              particles.push({
+                x: rx, y: ry, z: 5,
+                vx: (Math.random() - 0.5) * 0.8, vy: (Math.random() - 0.5) * 0.8, vz: Math.random() * 1.5 + 0.5,
+                size: Math.random() * 3 + 2,
+                color: '#4ade80', alpha: 0.8, decay: 0.018
+              });
+            } else if (amb.ambientType === 'shadow_mist' || amb.ambientType === 'stars' || amb.ambientType === 'blood_mist') {
+              particles.push({
+                x: rx, y: ry, z: Math.random() * 20 + 5,
+                vx: (Math.random() - 0.5) * 0.6, vy: (Math.random() - 0.5) * 0.6, vz: 0.5,
+                size: Math.random() * 3.5 + 1.5,
+                color: amb.ambientColor || '#c084fc', alpha: 0.75, decay: 0.02
+              });
+            } else if (amb.ambientType === 'divine_motes') {
+              particles.push({
+                x: rx, y: ry, z: 50,
+                vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5, vz: -1.0,
+                size: Math.random() * 3 + 1.5,
+                color: '#fef08a', alpha: 0.9, decay: 0.015
+              });
+            }
+          }
+
+          for (let i = enemyMinions.length - 1; i >= 0; i--) {
+            const m = enemyMinions[i];
+            const ma = Math.atan2(player.y - m.y, player.x - m.x);
+            m.x += Math.cos(ma) * m.speed;
+            m.y += Math.sin(ma) * m.speed;
+
+            const dm = Math.hypot(player.x - m.x, player.y - m.y);
+            if (dm < player.radius + m.r) {
+              player.takeDamage(m.damage, false, 'summon');
+              spawnSparks(m.x, m.y, 10, m.color);
+              enemyMinions.splice(i, 1);
+            }
+          }
+
+          for (let i = groundHazards.length - 1; i >= 0; i--) {
+            const gh = groundHazards[i];
+            gh.life--;
+
+            if (gh.isVortex) {
+              const va = Math.atan2(gh.y - player.y, gh.x - player.x);
+              const vd = Math.hypot(gh.x - player.x, gh.y - player.y);
+              if (vd < gh.r) {
+                player.x += Math.cos(va) * 1.8;
+                player.y += Math.sin(va) * 1.8;
+              }
+            } else if (gh.dmg) {
+              const vd = Math.hypot(gh.x - player.x, gh.y - player.y);
+              if (vd < gh.r && gh.life % 20 === 0) {
+                player.takeDamage(gh.dmg, false, 'hazard');
+              }
+            }
+
+            if (gh.life <= 0) groundHazards.splice(i, 1);
+          }
+        } else {
+          checkSanctuaryInteractions();
+        }
+      }
+
+      drawEnvironment();
+
+      if (scene === 'arena') {
+        groundHazards.forEach(gh => {
+          const gScr = worldToScreen(gh.x, gh.y);
+          ctx.save();
+          ctx.beginPath();
+          ctx.ellipse(gScr.x, gScr.y, gh.r, gh.r * Y_SQUASH, 0, 0, Math.PI * 2);
+          ctx.fillStyle = gh.isVortex ? 'rgba(217, 119, 6, 0.25)' : `${gh.color}44`;
+          ctx.fill();
+          ctx.strokeStyle = gh.color;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        bossProjectiles.forEach(proj => {
+          const pScr = worldToScreen(proj.x, proj.y);
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(pScr.x, pScr.y - 12, proj.r, 0, Math.PI * 2);
+          ctx.fillStyle = proj.color;
+          ctx.shadowColor = proj.color;
+          ctx.shadowBlur = proj.deflected ? 14 : 8;
+          ctx.fill();
+          ctx.restore();
+        });
+      }
+
+      if (scene === 'arena') {
+        shockwaves.forEach(sw => {
+          const swScr = worldToScreen(sw.x, sw.y);
+          ctx.beginPath();
+          ctx.ellipse(swScr.x, swScr.y, sw.radius, sw.radius * Y_SQUASH, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = sw.color;
+          ctx.globalAlpha = sw.alpha * 0.8;
+          ctx.lineWidth = 4.5;
+          ctx.stroke();
+          ctx.globalAlpha = 1.0;
+        });
+      }
+
+      renderWorldObjects();
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.z += p.vz;
+        p.alpha -= p.decay;
+
+        if (p.alpha <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        const pScr = worldToScreen(p.x, p.y);
+        ctx.beginPath();
+        ctx.arc(pScr.x, pScr.y - p.z, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.alpha;
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      }
+
+      for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const ft = floatingTexts[i];
+        ft.z += 0.65;
+        ft.life--;
+        ft.alpha = Math.min(1, ft.life / 20);
+
+        if (ft.life <= 0) {
+          floatingTexts.splice(i, 1);
+          continue;
+        }
+
+        const ftScr = worldToScreen(ft.x, ft.y);
+        ctx.save();
+        ctx.font = 'bold 12px Cinzel';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = ft.color;
+        ctx.globalAlpha = ft.alpha;
+        ctx.shadowColor = '#000';
+        ctx.shadowBlur = 6;
+        ctx.fillText(ft.text, ftScr.x, ftScr.y - ft.z);
+        ctx.restore();
+      }
+
+      updateHUD();
+      coop.syncPosition();
+      requestAnimationFrame(animate);
+    }
+
+    window.onload = () => {
+      renderEstusUI();
+      renderArsenalUI();
+      equipWeapon(WEAPONS[0]);
+      returnToSanctuary();
+      animate();
+    };
+
+    document.getElementById("create-room-btn").onclick = () => coop.createRoom();
+    document.getElementById("join-room-btn").onclick = () =>
+      coop.joinRoom(document.getElementById("room-code-input").value);
+  </script>
+</body>
+</html>
