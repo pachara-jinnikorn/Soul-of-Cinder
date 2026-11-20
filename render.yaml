@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: soul-of-cinder-server
+    runtime: node
+    rootDir: Server
+    buildCommand: npm install
+    startCommand: npm start
