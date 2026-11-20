@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Soul of Cinder</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700;900&family=Inter:wght@400;600&display=swap');
 
@@ -150,7 +152,7 @@
         <span id="coop-status" class="text-stone-400 font-mono">Solo Mode</span>
       </div>
       <div class="flex items-center gap-1.5">
-        <input id="coop-server-input" type="text" value="ws://localhost:8080" placeholder="ws://RADMIN-IP:8080" title="WebSocket server address" class="w-44 px-2 py-1 rounded bg-stone-900 border border-stone-700 text-amber-100 font-mono text-[11px] focus:outline-none focus:border-amber-500" />
+        <input id="coop-server-input" type="text" value="Firebase Realtime" readonly title="Managed Firebase co-op server" class="w-36 px-2 py-1 rounded bg-stone-900 border border-stone-700 text-emerald-300 font-mono text-[11px] focus:outline-none" />
         <button id="create-room-btn" type="button" class="px-2.5 py-1 rounded bg-amber-950/70 border border-amber-700/70 text-amber-200 hover:bg-amber-900 transition cursor-pointer text-[10px] font-semibold uppercase tracking-wider">
           Create Room
         </button>
@@ -4577,174 +4579,142 @@
       }
     }
 /* ==========================================================================
-   CO-OP WEBSOCKET CLIENT (Step 3A: Rooms & Player Position Sync)
+   FIREBASE REALTIME CO-OP CLIENT
    ========================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyG0AXZ9M9OgSA1MI-G22Es0Ybq3LtWKHs",
+  authDomain: "soul-of-cinder.firebaseapp.com",
+  databaseURL: "https://soul-of-cinder-default-rtdb.firebaseio.com",
+  projectId: "soul-of-cinder",
+  storageBucket: "soul-of-cinder.firebasestorage.app",
+  messagingSenderId: "902647278591",
+  appId: "1:902647278591:web:96570d0ef922d4d7a6e15ca",
+  measurementId: "G-8H1T9VFVIS"
+};
+
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const firebaseDb = firebase.database();
 const remotePlayers = new Map();
 
 const coop = {
-  ws: null,
-  playerId: null,
+  playerId: `p_${Math.random().toString(36).slice(2, 8)}`,
   hostId: null,
   roomCode: null,
+  roomRef: null,
+  playersRef: null,
+  eventsRef: null,
+  worldRef: null,
+  rosterListener: null,
+  eventsListener: null,
   tick: 0,
+  joinedAt: 0,
   applyingRemote: false,
 
-  isConnected() {
-    return Boolean(this.ws && this.ws.readyState === WebSocket.OPEN && this.roomCode);
+  isConnected() { return Boolean(this.roomCode && this.playersRef); },
+  isHost() { return !this.isConnected() || this.hostId === this.playerId; },
+  makeRoomCode() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "";
+    for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
   },
-
-  isHost() {
-    return !this.isConnected() || this.hostId === this.playerId;
+  async leaveRoom() {
+    if (!this.roomCode) return;
+    if (this.rosterListener) this.playersRef.off("value", this.rosterListener);
+    if (this.eventsListener) this.eventsRef.off("child_added", this.eventsListener);
+    await this.playersRef.child(this.playerId).remove().catch(() => {});
+    this.roomCode = null;
+    this.roomRef = null;
+    this.playersRef = null;
+    this.eventsRef = null;
+    this.worldRef = null;
+    remotePlayers.clear();
+    setCoopStatus("Solo Mode");
   },
-
-  connect(url) {
-    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
-      return Promise.resolve();
-    }
-    return new Promise((resolve, reject) => {
-      const socket = new WebSocket(url);
-      this.ws = socket;
-
-      socket.onopen = () => {
-        setCoopStatus("Connected • Not in room");
-        resolve();
-      };
-
-      socket.onerror = (err) => {
-        setCoopStatus("Cannot reach ws://localhost:8080");
-        reject(err);
-      };
-
-      socket.onclose = () => {
-        this.roomCode = null;
-        this.hostId = null;
-        remotePlayers.clear();
-        setCoopStatus("Solo Mode");
-      };
-
-      socket.onmessage = (ev) => {
-        let msg;
-        try {
-          msg = JSON.parse(ev.data);
-        } catch {
-          return;
-        }
-        this.onMessage(msg);
-      };
-    });
-  },
-
   async createRoom() {
-    const url = getCoopServerUrl();
-    if (!url) return;
-    await this.connect(url);
-    this.ws.send(JSON.stringify({ type: "create_room" }));
+    await this.leaveRoom();
+    const code = this.makeRoomCode();
+    const roomRef = firebaseDb.ref(`rooms/${code}`);
+    this.joinedAt = Date.now();
+    this.roomCode = code;
+    this.roomRef = roomRef;
+    this.hostId = this.playerId;
+    this.playersRef = roomRef.child("players");
+    this.eventsRef = roomRef.child("events");
+    this.worldRef = roomRef.child("world");
+    await roomRef.set({ hostId: this.playerId, createdAt: this.joinedAt, players: { [this.playerId]: this.localPlayerState() } });
+    this.playersRef.child(this.playerId).onDisconnect().remove();
+    this.bindRoom();
+    setCoopStatus(`Room ${code} [HOST] • 1/4`);
   },
-
   async joinRoom(code) {
     const clean = String(code || "").trim().toUpperCase();
     if (!clean) return;
-    const url = getCoopServerUrl();
-    if (!url) return;
-    await this.connect(url);
-    this.ws.send(JSON.stringify({ type: "join_room", roomCode: clean }));
+    await this.leaveRoom();
+    const roomRef = firebaseDb.ref(`rooms/${clean}`);
+    const snapshot = await roomRef.once("value");
+    if (!snapshot.exists()) { setCoopStatus("Room not found"); return; }
+    const room = snapshot.val();
+    const playerCount = room.players ? Object.keys(room.players).length : 0;
+    if (playerCount >= 4) { setCoopStatus("Room is full"); return; }
+    this.joinedAt = Date.now();
+    this.roomCode = clean;
+    this.roomRef = roomRef;
+    this.hostId = room.hostId;
+    this.playersRef = roomRef.child("players");
+    this.eventsRef = roomRef.child("events");
+    this.worldRef = roomRef.child("world");
+    await this.playersRef.child(this.playerId).set(this.localPlayerState());
+    this.playersRef.child(this.playerId).onDisconnect().remove();
+    this.bindRoom();
   },
-
-  send(message) {
-    if (!this.isConnected()) return;
-    this.ws.send(JSON.stringify(message));
-  },
-
-  sendAction(action) {
-    if (this.applyingRemote) return;
-    this.send({
-      type: "player_action",
-      action,
-      state: {
-        weaponId: currentWeapon.id,
-        attackAngle: player.attackAngle,
-        facingAngle: player.facingAngle,
-      },
+  bindRoom() {
+    this.rosterListener = this.playersRef.on("value", (snapshot) => {
+      const players = snapshot.val() || {};
+      const ids = Object.keys(players);
+      for (const id of remotePlayers.keys()) if (!ids.includes(id)) remotePlayers.delete(id);
+      for (const id of ids) {
+        if (id === this.playerId) continue;
+        remotePlayers.set(id, { x: player.x, y: player.y, facingAngle: 0, isRolling: false, isAttacking: false, isParrying: false, isHealing: false, weaponId: "w0", ...(players[id] || {}) });
+      }
+      rescaleBossForCoop();
+      setCoopStatus(`Room ${this.roomCode} [${this.isHost() ? "HOST" : "MEMBER"}] • ${ids.length}/4`);
+    });
+    this.eventsListener = this.eventsRef.on("child_added", (snapshot) => {
+      const msg = snapshot.val();
+      if (!msg || msg.senderId === this.playerId) return;
+      if (msg.type === "combat_event") this.applyCombatEvent(msg);
+      if (msg.type === "scene_change") this.applySceneChange(msg);
+      if (msg.type === "player_action") {
+        const target = remotePlayers.get(msg.senderId) || {};
+        remotePlayers.set(msg.senderId, { ...target, ...msg.state, action: msg.action, actionTick: this.tick });
+      }
+    });
+    this.worldRef.on("value", (snapshot) => {
+      if (!this.isHost()) this.applyWorldSync(snapshot.val());
     });
   },
-
+  localPlayerState() {
+    return { x: player.x, y: player.y, hp: player.hp, maxHp: player.maxHp, stam: player.stam, maxStam: player.maxStam, facingAngle: player.facingAngle, isRolling: player.isRolling, rollTimer: player.rollTimer, rollDir: player.rollDir, isAttacking: player.isAttacking, attackTimer: player.attackTimer, attackDuration: player.attackDuration, attackAngle: player.attackAngle, isParrying: player.isParrying, parryTimer: player.parryTimer, isHealing: player.isHealing, weaponId: currentWeapon.id };
+  },
+  send(message) {
+    if (!this.isConnected()) return;
+    this.eventsRef.push({ ...message, senderId: this.playerId, timestamp: firebase.database.ServerValue.TIMESTAMP });
+  },
+  sendAction(action) {
+    if (this.applyingRemote) return;
+    this.send({ type: "player_action", action, state: { weaponId: currentWeapon.id, attackAngle: player.attackAngle, facingAngle: player.facingAngle } });
+  },
   sendCombat(kind, data) {
     if (this.applyingRemote) return;
     this.send({ type: "combat_event", kind, data });
   },
-
-  onMessage(msg) {
-    if (msg.type === "welcome") {
-      this.playerId = msg.playerId;
-    } else if (msg.type === "room_joined" || msg.type === "room_roster") {
-      this.roomCode = msg.roomCode;
-      this.hostId = msg.hostId;
-      const ids = new Set(msg.players || []);
-
-      for (const id of remotePlayers.keys()) {
-        if (!ids.has(id)) remotePlayers.delete(id);
-      }
-      for (const id of ids) {
-        if (id !== this.playerId && !remotePlayers.has(id)) {
-          remotePlayers.set(id, {
-            x: player.x,
-            y: player.y,
-            facingAngle: 0,
-            isRolling: false,
-            rollTimer: 0,
-            rollDir: { x: 0, y: 0 },
-            isAttacking: false,
-            attackTimer: 0,
-            attackDuration: 20,
-            attackAngle: 0,
-            isParrying: false,
-            parryTimer: 0,
-            isHealing: false,
-            weaponId: "w0",
-          });
-        }
-      }
-      rescaleBossForCoop();
-
-      const role = this.isHost() ? "HOST" : "MEMBER";
-      setCoopStatus(`Room ${this.roomCode} [${role}] • ${ids.size}/4`);
-    } else if (msg.type === "player_left") {
-      remotePlayers.delete(msg.playerId);
-      rescaleBossForCoop();
-      if (this.roomCode) {
-        setCoopStatus(`Room ${this.roomCode} • ${remotePlayers.size + 1}/4`);
-      }
-    } else if (msg.type === "player_state" && msg.senderId !== this.playerId) {
-      const target = remotePlayers.get(msg.senderId) || {};
-      remotePlayers.set(msg.senderId, { ...target, ...msg.state });
-    } else if (msg.type === "player_action" && msg.senderId !== this.playerId) {
-      const target = remotePlayers.get(msg.senderId) || {};
-      remotePlayers.set(msg.senderId, {
-        ...target,
-        ...msg.state,
-        action: msg.action,
-        actionTick: this.tick,
-      });
-    } else if (msg.type === "combat_event" && msg.senderId !== this.playerId) {
-      this.applyCombatEvent(msg);
-    } else if (msg.type === "scene_change" && msg.senderId !== this.playerId) {
-      this.applySceneChange(msg);
-    } else if (msg.type === "world_sync" && msg.senderId !== this.playerId) {
-      this.applyWorldSync(msg.state);
-    } else if (msg.type === "error") {
-      setCoopStatus(msg.message || "Room error");
-    }
-  },
-
   applyCombatEvent(msg) {
     if (!msg.data || scene !== "arena" || gameState !== "playing") return;
-
     if (msg.kind === "boss_hit") {
       const damage = Number(msg.data.damage);
       const poiseDamage = Number(msg.data.poiseDamage);
-      if (Number.isFinite(damage) && Number.isFinite(poiseDamage)) {
-        boss.takeDamage(damage, poiseDamage);
-      }
+      if (Number.isFinite(damage) && Number.isFinite(poiseDamage)) boss.takeDamage(damage, poiseDamage);
     } else if (msg.kind === "minion_hit") {
       const index = Number(msg.data.index);
       const damage = Number(msg.data.damage);
@@ -4755,7 +4725,6 @@ const coop = {
       }
     }
   },
-
   applySceneChange(msg) {
     if (msg.scene !== "arena" && msg.scene !== "sanctuary") return;
     this.applyingRemote = true;
@@ -4766,79 +4735,32 @@ const coop = {
       } else if (msg.scene === "sanctuary" && scene !== "sanctuary") {
         returnToSanctuary();
       }
-    } finally {
-      this.applyingRemote = false;
-    }
+    } finally { this.applyingRemote = false; }
   },
-
   applyWorldSync(state) {
     if (!state || scene !== state.scene || this.isHost() || scene !== "arena" || !state.boss) return;
-
-    const values = ["x", "y", "hp", "maxHp", "poise", "phase", "timer"];
-    values.forEach((key) => {
-      if (Number.isFinite(state.boss[key])) boss[key] = state.boss[key];
-    });
+    ["x", "y", "hp", "maxHp", "poise", "phase", "timer"].forEach((key) => { if (Number.isFinite(state.boss[key])) boss[key] = state.boss[key]; });
     if (typeof state.boss.state === "string") boss.state = state.boss.state;
-    if (typeof state.boss.currentAttackType === "string") {
-      boss.currentAttackType = state.boss.currentAttackType;
-    }
+    if (typeof state.boss.currentAttackType === "string") boss.currentAttackType = state.boss.currentAttackType;
     if (Array.isArray(state.projectiles)) bossProjectiles = state.projectiles;
     if (Array.isArray(state.minions)) enemyMinions = state.minions;
     if (Array.isArray(state.hazards)) groundHazards = state.hazards;
   },
-
   syncPosition() {
     if (!this.isConnected()) return;
     this.tick++;
-    if (this.tick % 2 !== 0) return; // ~30 times/sec
-
-    this.send({
-      type: "player_state",
-      state: {
-        x: player.x,
-        y: player.y,
-        hp: player.hp,
-        maxHp: player.maxHp,
-        stam: player.stam,
-        maxStam: player.maxStam,
-        facingAngle: player.facingAngle,
-        isRolling: player.isRolling,
-        rollTimer: player.rollTimer,
-        rollDir: player.rollDir,
-        isAttacking: player.isAttacking,
-        attackTimer: player.attackTimer,
-        attackDuration: player.attackDuration,
-        attackAngle: player.attackAngle,
-        isParrying: player.isParrying,
-        parryTimer: player.parryTimer,
-        isHealing: player.isHealing,
-        weaponId: currentWeapon.id,
-      },
-    });
-
+    if (this.tick % 2 !== 0) return;
+    this.playersRef.child(this.playerId).set(this.localPlayerState()).catch(() => {});
     if (this.isHost() && this.tick % 6 === 0 && scene === "arena") {
-      this.send({
-        type: "world_sync",
-        state: {
-          scene,
-          boss: {
-            x: boss.x,
-            y: boss.y,
-            hp: boss.hp,
-            maxHp: boss.maxHp,
-            poise: boss.poise,
-            phase: boss.phase,
-            state: boss.state,
-            timer: boss.timer,
-            currentAttackType: boss.currentAttackType,
-          },
-          projectiles: bossProjectiles,
-          minions: enemyMinions,
-          hazards: groundHazards,
-        },
-      });
+      this.worldRef.set({
+        scene,
+        boss: { x: boss.x, y: boss.y, hp: boss.hp, maxHp: boss.maxHp, poise: boss.poise, phase: boss.phase, state: boss.state, timer: boss.timer, currentAttackType: boss.currentAttackType },
+        projectiles: bossProjectiles,
+        minions: enemyMinions,
+        hazards: groundHazards
+      }).catch(() => {});
     }
-  },
+  }
 };
 
 function getCoopPlayerCount() {
@@ -4864,23 +4786,6 @@ function rescaleBossForCoop() {
   boss.hp = Math.max(0, Math.min(nextMaxHp, Math.round(nextMaxHp * healthRatio)));
   bossHpCount.textContent = `${Math.ceil(boss.hp)} / ${boss.maxHp}`;
   bossHpBar.style.width = `${(boss.hp / boss.maxHp) * 100}%`;
-}
-
-function getCoopServerUrl() {
-  const input = document.getElementById("coop-server-input");
-  const raw = input ? input.value.trim() : "";
-  const candidate = raw || "ws://localhost:8080";
-  const normalized = /^wss?:\/\//i.test(candidate) ? candidate : `ws://${candidate}`;
-
-  try {
-    const url = new URL(normalized);
-    if (url.protocol !== "ws:" && url.protocol !== "wss:") throw new Error("WebSocket URL required");
-    if (!url.hostname) throw new Error("Server address required");
-    return url.toString().replace(/\/$/, "");
-  } catch (error) {
-    setCoopStatus(error.message || "Invalid co-op server address");
-    return null;
-  }
 }
 
 function setCoopStatus(text) {
