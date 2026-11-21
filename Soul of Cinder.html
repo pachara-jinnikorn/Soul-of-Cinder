@@ -262,11 +262,8 @@
       </div>
 
       <div>
-        <div class="text-[10px] text-stone-400 uppercase tracking-widest mb-2">Body Style</div>
-        <div class="grid grid-cols-2 gap-2">
-          <button id="gender-male-btn" type="button" class="wardrobe-choice px-3 py-2 rounded border border-stone-700 bg-stone-900 text-stone-200 hover:border-sky-500">Male</button>
-          <button id="gender-female-btn" type="button" class="wardrobe-choice px-3 py-2 rounded border border-stone-700 bg-stone-900 text-stone-200 hover:border-sky-500">Female</button>
-        </div>
+        <div class="text-[10px] text-stone-400 uppercase tracking-widest mb-2">Character Style</div>
+        <div class="px-3 py-2 rounded border border-sky-500/70 bg-sky-950/30 text-sky-200 text-xs text-center">Male Champion</div>
       </div>
 
       <div>
@@ -1529,9 +1526,6 @@
     const wardrobeBtn = document.getElementById('wardrobe-btn');
     const closeWardrobeBtn = document.getElementById('close-wardrobe-btn');
     const confirmWardrobeBtn = document.getElementById('confirm-wardrobe-btn');
-    const maleBtn = document.getElementById('gender-male-btn');
-    const femaleBtn = document.getElementById('gender-female-btn');
-
     function toggleWardrobeModal(show) {
       if (show) {
         updateWardrobeSelection();
@@ -1542,8 +1536,6 @@
     }
 
     function updateWardrobeSelection() {
-      maleBtn.className = `wardrobe-choice px-3 py-2 rounded border bg-stone-900 ${player.gender === 'male' ? 'border-sky-400 text-sky-200' : 'border-stone-700 text-stone-200'}`;
-      femaleBtn.className = `wardrobe-choice px-3 py-2 rounded border bg-stone-900 ${player.gender === 'female' ? 'border-sky-400 text-sky-200' : 'border-stone-700 text-stone-200'}`;
       document.querySelectorAll('.armor-choice').forEach((button) => {
         button.style.outline = button.dataset.armor === player.armorColor ? '2px solid #38bdf8' : 'none';
       });
@@ -1551,14 +1543,6 @@
 
     wardrobeBtn.addEventListener('click', () => toggleWardrobeModal(true));
     closeWardrobeBtn.addEventListener('click', () => toggleWardrobeModal(false));
-    maleBtn.addEventListener('click', () => {
-      player.gender = 'male';
-      updateWardrobeSelection();
-    });
-    femaleBtn.addEventListener('click', () => {
-      player.gender = 'female';
-      updateWardrobeSelection();
-    });
     document.querySelectorAll('.armor-choice').forEach((button) => {
       button.addEventListener('click', () => {
         player.armorColor = button.dataset.armor;
@@ -1566,7 +1550,6 @@
       });
     });
     confirmWardrobeBtn.addEventListener('click', () => {
-      localStorage.setItem('soc_gender', player.gender);
       localStorage.setItem('soc_armor', player.armorColor);
       coop.sendAction('appearance');
       toggleWardrobeModal(false);
@@ -1657,7 +1640,7 @@
     const player = {
       x: 0,
       y: 120,
-      gender: localStorage.getItem('soc_gender') || 'male',
+      gender: 'male',
       armorColor: localStorage.getItem('soc_armor') || '#475569',
       radius: 18,
       maxHp: 100,
@@ -2363,11 +2346,10 @@
         ctx.stroke();
 
         const legBob = Math.sin(this.walkCycle) * 2;
-        const isFemale = this.gender === 'female';
-        const torsoWidth = isFemale ? 10 : 12;
-        const shoulderWidth = isFemale ? 16 : 20;
-        const headRadius = isFemale ? 6.5 : 7.5;
-        const waistWidth = isFemale ? 7.5 : 9;
+        const torsoWidth = 12;
+        const shoulderWidth = 20;
+        const headRadius = 7.5;
+        const waistWidth = 9;
 
         ctx.save();
 
@@ -2404,7 +2386,7 @@
         ctx.lineTo(waistWidth * 0.55, -3 - zOffset);
         ctx.quadraticCurveTo(waistWidth * 0.45, -7 - zOffset, torsoWidth * 0.55, -10 - zOffset);
         ctx.closePath();
-        ctx.fillStyle = isFemale ? '#243246' : '#1e293b';
+        ctx.fillStyle = '#1e293b';
         ctx.globalAlpha = 0.78;
         ctx.fill();
         ctx.globalAlpha = 1;
@@ -2417,55 +2399,14 @@
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        if (isFemale) {
-          ctx.beginPath();
-          ctx.arc(0, -34 - zOffset + legBob, headRadius + 2.2, Math.PI * 0.98, Math.PI * 2.02);
-          ctx.quadraticCurveTo(headRadius + 1.5, -29 - zOffset + legBob, headRadius, -20 - zOffset + legBob);
-          ctx.quadraticCurveTo(3, -27 - zOffset + legBob, -headRadius, -20 - zOffset + legBob);
-          ctx.quadraticCurveTo(-headRadius - 1.5, -29 - zOffset + legBob, -headRadius - 2.2, -34 - zOffset + legBob);
-          ctx.closePath();
-          ctx.fillStyle = '#f4d35e';
-          ctx.fill();
-          ctx.strokeStyle = '#b7791f';
-          ctx.lineWidth = 1.2;
-          ctx.stroke();
-
-          ctx.beginPath();
-          ctx.moveTo(-headRadius - 1, -31 - zOffset + legBob);
-          ctx.quadraticCurveTo(-10, -21 - zOffset + legBob, -6.5, -16 - zOffset + legBob);
-          ctx.lineTo(-3.5, -19 - zOffset + legBob);
-          ctx.quadraticCurveTo(-6, -25 - zOffset + legBob, -4.5, -36 - zOffset + legBob);
-          ctx.closePath();
-          ctx.moveTo(headRadius + 1, -31 - zOffset + legBob);
-          ctx.quadraticCurveTo(10, -21 - zOffset + legBob, 6.5, -16 - zOffset + legBob);
-          ctx.lineTo(3.5, -19 - zOffset + legBob);
-          ctx.quadraticCurveTo(6, -25 - zOffset + legBob, 4.5, -36 - zOffset + legBob);
-          ctx.closePath();
-          ctx.fillStyle = '#f6c85f';
-          ctx.fill();
-          ctx.strokeStyle = '#b7791f';
-          ctx.stroke();
-
-          ctx.beginPath();
-          ctx.moveTo(-2, -40 - zOffset + legBob);
-          ctx.quadraticCurveTo(0, -38 - zOffset + legBob, 2, -40 - zOffset + legBob);
-          ctx.lineTo(5, -34 - zOffset + legBob);
-          ctx.lineTo(-5, -34 - zOffset + legBob);
-          ctx.closePath();
-          ctx.fillStyle = '#ffe08a';
-          ctx.fill();
-        }
-
-        if (!isFemale) {
-          ctx.beginPath();
-          ctx.moveTo(-headRadius + 1, -35 - zOffset + legBob);
-          ctx.lineTo(-headRadius - 2, -40 - zOffset + legBob);
-          ctx.moveTo(headRadius - 1, -35 - zOffset + legBob);
-          ctx.lineTo(headRadius + 2, -40 - zOffset + legBob);
-          ctx.strokeStyle = '#334155';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        }
+        ctx.beginPath();
+        ctx.moveTo(-headRadius + 1, -35 - zOffset + legBob);
+        ctx.lineTo(-headRadius - 2, -40 - zOffset + legBob);
+        ctx.moveTo(headRadius - 1, -35 - zOffset + legBob);
+        ctx.lineTo(headRadius + 2, -40 - zOffset + legBob);
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 2;
+        ctx.stroke();
 
         ctx.restore();
 
@@ -5107,9 +5048,8 @@ function drawRemotePlayer(rp) {
   const scr = worldToScreen(rp.x, rp.y);
   const weapon = WEAPONS.find((w) => w.id === rp.weaponId) || WEAPONS[0];
   const armorColor = rp.armorColor || "#0284c7";
-  const isFemale = rp.gender === "female";
-  const torsoWidth = isFemale ? 10.5 : 13.5;
-  const headRadius = isFemale ? 6.6 : 7.8;
+  const torsoWidth = 13.5;
+  const headRadius = 7.8;
   ctx.save();
   ctx.translate(scr.x, scr.y);
 
@@ -5127,7 +5067,7 @@ function drawRemotePlayer(rp) {
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  const shoulderWidth = isFemale ? 16 : 20;
+  const shoulderWidth = 20;
   ctx.beginPath();
   ctx.ellipse(-shoulderWidth * 0.42, -20, shoulderWidth * 0.34, 6.5, -0.22, 0, Math.PI * 2);
   ctx.ellipse(shoulderWidth * 0.42, -20, shoulderWidth * 0.34, 6.5, 0.22, 0, Math.PI * 2);
@@ -5145,55 +5085,14 @@ function drawRemotePlayer(rp) {
   ctx.strokeStyle = "#0f172a";
   ctx.stroke();
 
-  if (isFemale) {
-    ctx.beginPath();
-    ctx.arc(0, -34, headRadius + 2.2, Math.PI * 0.98, Math.PI * 2.02);
-    ctx.quadraticCurveTo(headRadius + 1.5, -29, headRadius, -20);
-    ctx.quadraticCurveTo(3, -27, -headRadius, -20);
-    ctx.quadraticCurveTo(-headRadius - 1.5, -29, -headRadius - 2.2, -34);
-    ctx.closePath();
-    ctx.fillStyle = "#f4d35e";
-    ctx.fill();
-    ctx.strokeStyle = "#b7791f";
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(-headRadius - 1, -31);
-    ctx.quadraticCurveTo(-10, -21, -6.5, -16);
-    ctx.lineTo(-3.5, -19);
-    ctx.quadraticCurveTo(-6, -25, -4.5, -36);
-    ctx.closePath();
-    ctx.moveTo(headRadius + 1, -31);
-    ctx.quadraticCurveTo(10, -21, 6.5, -16);
-    ctx.lineTo(3.5, -19);
-    ctx.quadraticCurveTo(6, -25, 4.5, -36);
-    ctx.closePath();
-    ctx.fillStyle = "#f6c85f";
-    ctx.fill();
-    ctx.strokeStyle = "#b7791f";
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(-2, -40);
-    ctx.quadraticCurveTo(0, -38, 2, -40);
-    ctx.lineTo(5, -34);
-    ctx.lineTo(-5, -34);
-    ctx.closePath();
-    ctx.fillStyle = "#ffe08a";
-    ctx.fill();
-  }
-
-  if (!isFemale) {
-    ctx.strokeStyle = "#334155";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-8, -35);
-    ctx.lineTo(-11, -40);
-    ctx.moveTo(8, -35);
-    ctx.lineTo(11, -40);
-    ctx.stroke();
-  }
+  ctx.strokeStyle = "#334155";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-8, -35);
+  ctx.lineTo(-11, -40);
+  ctx.moveTo(8, -35);
+  ctx.lineTo(11, -40);
+  ctx.stroke();
 
   if (Number.isFinite(rp.hp) && Number.isFinite(rp.maxHp) && rp.maxHp > 0) {
     ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
