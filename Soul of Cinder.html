@@ -234,6 +234,9 @@
       </div>
 
       <div class="flex items-center gap-2 mt-1 sm:mt-0">
+        <button id="wardrobe-btn" class="px-2.5 py-1 rounded bg-stone-900 border border-sky-900/60 text-sky-300 hover:text-white hover:border-sky-500 transition cursor-pointer text-[10px] uppercase tracking-wider font-semibold">
+          Wardrobe
+        </button>
         <button id="arsenal-btn" class="px-2.5 py-1 rounded bg-stone-900 border border-amber-900/60 text-amber-300 hover:text-amber-100 hover:border-amber-500 transition cursor-pointer text-[10px] uppercase tracking-wider font-semibold">
           Arsenal [TAB]
         </button>
@@ -244,6 +247,41 @@
           [R] Shrine
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- CHARACTER WARDROBE -->
+  <div id="wardrobe-modal" class="fixed inset-0 modal-glass z-50 hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-[#0b0a10] border border-sky-800/60 rounded-xl p-5 shadow-2xl flex flex-col gap-4">
+      <div class="flex justify-between items-center border-b border-stone-800 pb-3">
+        <div>
+          <h2 class="font-decorative text-xl text-sky-200 uppercase tracking-widest">Character Wardrobe</h2>
+          <p class="text-xs text-stone-400 font-sans mt-0.5">Choose body style and armor color.</p>
+        </div>
+        <button id="close-wardrobe-btn" class="text-stone-400 hover:text-white text-lg font-mono px-2 py-1 rounded bg-stone-900 border border-stone-700">✕</button>
+      </div>
+
+      <div>
+        <div class="text-[10px] text-stone-400 uppercase tracking-widest mb-2">Body Style</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="gender-male-btn" type="button" class="wardrobe-choice px-3 py-2 rounded border border-stone-700 bg-stone-900 text-stone-200 hover:border-sky-500">Male</button>
+          <button id="gender-female-btn" type="button" class="wardrobe-choice px-3 py-2 rounded border border-stone-700 bg-stone-900 text-stone-200 hover:border-sky-500">Female</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="text-[10px] text-stone-400 uppercase tracking-widest mb-2">Armor Color</div>
+        <div id="armor-color-options" class="grid grid-cols-6 gap-2">
+          <button type="button" data-armor="#475569" class="armor-choice h-9 rounded border-2 border-stone-700" style="background:#475569"></button>
+          <button type="button" data-armor="#7f1d1d" class="armor-choice h-9 rounded border-2 border-stone-700" style="background:#7f1d1d"></button>
+          <button type="button" data-armor="#1e3a8a" class="armor-choice h-9 rounded border-2 border-stone-700" style="background:#1e3a8a"></button>
+          <button type="button" data-armor="#14532d" class="armor-choice h-9 rounded border-2 border-stone-700" style="background:#14532d"></button>
+          <button type="button" data-armor="#581c87" class="armor-choice h-9 rounded border-2 border-stone-700" style="background:#581c87"></button>
+          <button type="button" data-armor="#e4e4e7" class="armor-choice h-9 rounded border-2 border-stone-700" style="background:#e4e4e7"></button>
+        </div>
+      </div>
+
+      <button id="confirm-wardrobe-btn" type="button" class="px-4 py-2 rounded bg-sky-950 border border-sky-500 text-sky-100 font-bold uppercase text-[11px] tracking-wider">Save Appearance</button>
     </div>
   </div>
 
@@ -697,6 +735,8 @@
         poiseDmg: 28,
         color: '#e2e8f0',
         slashColor: 'rgba(255, 255, 255, 0.75)',
+        trait: 'Balanced Form',
+        passive: 'Stamina recovery is 15% faster.',
         unlocked: true,
         source: 'Starting Blade'
       },
@@ -713,6 +753,8 @@
         poiseDmg: 55,
         color: '#f87171',
         slashColor: 'rgba(239, 68, 68, 0.8)',
+        trait: "Titan's Weight",
+        passive: 'Heavy hits deal 25% more poise damage and push harder.',
         unlocked: false,
         source: 'Defeat Boss 1 (Lord Malakor)'
       },
@@ -729,6 +771,8 @@
         poiseDmg: 16,
         color: '#a855f7',
         slashColor: 'rgba(168, 85, 247, 0.85)',
+        trait: 'Shadow Rush',
+        passive: 'Every hit restores 12 stamina and each attack steps forward.',
         unlocked: false,
         source: 'Defeat Boss 2 (Vaelith)'
       },
@@ -745,6 +789,8 @@
         poiseDmg: 35,
         color: '#f97316',
         slashColor: 'rgba(249, 115, 22, 0.85)',
+        trait: 'Cinder Burn',
+        passive: 'Hits ignite a ground zone that damages nearby enemies.',
         unlocked: false,
         source: 'Defeat Boss 3 (Ignis)'
       },
@@ -761,6 +807,8 @@
         poiseDmg: 70,
         color: '#38bdf8',
         slashColor: 'rgba(56, 189, 248, 0.85)',
+        trait: 'Frost Quake',
+        passive: 'Hits create a shockwave and deal 20% more poise damage.',
         unlocked: false,
         source: 'Defeat Boss 4 (Glacius)'
       },
@@ -777,6 +825,8 @@
         poiseDmg: 25,
         color: '#22c55e',
         slashColor: 'rgba(34, 197, 94, 0.85)',
+        trait: 'Briar Lash',
+        passive: 'Wide attacks can strike every nearby minion.',
         unlocked: false,
         source: 'Defeat Boss 5 (Sylvanas)'
       },
@@ -793,6 +843,8 @@
         poiseDmg: 38,
         color: '#facc15',
         slashColor: 'rgba(250, 204, 21, 0.85)',
+        trait: 'Chain Lightning',
+        passive: 'A boss hit arcs to the nearest nearby minion.',
         unlocked: false,
         source: 'Defeat Boss 6 (Zephyr)'
       },
@@ -809,6 +861,8 @@
         poiseDmg: 44,
         color: '#fbbf24',
         slashColor: 'rgba(251, 191, 36, 0.85)',
+        trait: 'Sand Veil',
+        passive: 'Hits leave a short-lived vortex that drags enemies.',
         unlocked: false,
         source: 'Defeat Boss 7 (Ouros)'
       },
@@ -825,6 +879,8 @@
         poiseDmg: 32,
         color: '#c084fc',
         slashColor: 'rgba(192, 132, 252, 0.9)',
+        trait: 'Voidstep',
+        passive: 'Every attack warps the wielder 35 units forward.',
         unlocked: false,
         source: 'Defeat Boss 8 (Nyx)'
       },
@@ -841,6 +897,8 @@
         poiseDmg: 20,
         color: '#fb7185',
         slashColor: 'rgba(251, 113, 133, 0.85)',
+        trait: 'Beast Leech',
+        passive: 'Each successful hit restores 4 HP.',
         unlocked: false,
         source: 'Defeat Boss 9 (Gorgon)'
       },
@@ -857,6 +915,8 @@
         poiseDmg: 80,
         color: '#fef08a',
         slashColor: 'rgba(254, 240, 138, 0.95)',
+        trait: 'Sovereign Might',
+        passive: '12% chance to critically deal 50% extra damage.',
         unlocked: false,
         source: 'Defeat Boss 10 (Primordial Ascendant)'
       }
@@ -1388,6 +1448,9 @@
         if (!arsenalModal.classList.contains('hidden')) {
           toggleArsenalModal(false);
         }
+        if (!wardrobeModal.classList.contains('hidden')) {
+          toggleWardrobeModal(false);
+        }
         if (!dialogueBox.classList.contains('hidden')) {
           closeDialogue();
         }
@@ -1455,6 +1518,54 @@
 
     closeArsenalBtn.addEventListener('click', () => toggleArsenalModal(false));
     closeArsenalFooterBtn.addEventListener('click', () => toggleArsenalModal(false));
+
+    const wardrobeModal = document.getElementById('wardrobe-modal');
+    const wardrobeBtn = document.getElementById('wardrobe-btn');
+    const closeWardrobeBtn = document.getElementById('close-wardrobe-btn');
+    const confirmWardrobeBtn = document.getElementById('confirm-wardrobe-btn');
+    const maleBtn = document.getElementById('gender-male-btn');
+    const femaleBtn = document.getElementById('gender-female-btn');
+
+    function toggleWardrobeModal(show) {
+      if (show) {
+        updateWardrobeSelection();
+        wardrobeModal.classList.remove('hidden');
+      } else {
+        wardrobeModal.classList.add('hidden');
+      }
+    }
+
+    function updateWardrobeSelection() {
+      maleBtn.className = `wardrobe-choice px-3 py-2 rounded border bg-stone-900 ${player.gender === 'male' ? 'border-sky-400 text-sky-200' : 'border-stone-700 text-stone-200'}`;
+      femaleBtn.className = `wardrobe-choice px-3 py-2 rounded border bg-stone-900 ${player.gender === 'female' ? 'border-sky-400 text-sky-200' : 'border-stone-700 text-stone-200'}`;
+      document.querySelectorAll('.armor-choice').forEach((button) => {
+        button.style.outline = button.dataset.armor === player.armorColor ? '2px solid #38bdf8' : 'none';
+      });
+    }
+
+    wardrobeBtn.addEventListener('click', () => toggleWardrobeModal(true));
+    closeWardrobeBtn.addEventListener('click', () => toggleWardrobeModal(false));
+    maleBtn.addEventListener('click', () => {
+      player.gender = 'male';
+      updateWardrobeSelection();
+    });
+    femaleBtn.addEventListener('click', () => {
+      player.gender = 'female';
+      updateWardrobeSelection();
+    });
+    document.querySelectorAll('.armor-choice').forEach((button) => {
+      button.addEventListener('click', () => {
+        player.armorColor = button.dataset.armor;
+        updateWardrobeSelection();
+      });
+    });
+    confirmWardrobeBtn.addEventListener('click', () => {
+      localStorage.setItem('soc_gender', player.gender);
+      localStorage.setItem('soc_armor', player.armorColor);
+      coop.sendAction('appearance');
+      toggleWardrobeModal(false);
+      spawnSparks(player.x, player.y, 12, player.armorColor);
+    });
 
     restartBtn.addEventListener('click', () => {
       sound.init();
@@ -1540,6 +1651,8 @@
     const player = {
       x: 0,
       y: 120,
+      gender: localStorage.getItem('soc_gender') || 'male',
+      armorColor: localStorage.getItem('soc_armor') || '#475569',
       radius: 18,
       maxHp: 100,
       hp: 100,
@@ -1638,7 +1751,8 @@
 
         // Stamina Recovery
         if (!this.isRolling && !this.isAttacking && !this.isParrying && this.stam < this.maxStam) {
-          this.stam = Math.min(this.maxStam, this.stam + this.stamRegen);
+          const staminaRecovery = currentWeapon.id === 'w0' ? this.stamRegen * 1.15 : this.stamRegen;
+          this.stam = Math.min(this.maxStam, this.stam + staminaRecovery);
         }
 
         // Movement / Roll Execution
@@ -1744,6 +1858,9 @@
           this.x += Math.cos(this.attackAngle) * 35;
           this.y += Math.sin(this.attackAngle) * 35;
           spawnSparks(this.x, this.y, 8, '#c084fc');
+        } else if (currentWeapon.id === 'w2') {
+          this.x += Math.cos(this.attackAngle) * 12;
+          this.y += Math.sin(this.attackAngle) * 12;
         }
 
         sound.playSwordSwing(currentWeapon.reach > 90 ? 320 : 540);
@@ -1807,6 +1924,19 @@
           if (Math.abs(diff) < Math.PI / 1.7) {
             let dmg = currentWeapon.damage;
             let poiseDmg = currentWeapon.poiseDmg;
+            const isCritical = currentWeapon.id === 'w10' && Math.random() < 0.12;
+            if (isCritical) {
+              dmg = Math.round(dmg * 1.5);
+              spawnFloatingText(boss.x, boss.y, `SOVEREIGN CRITICAL! -${dmg}`, '#fef08a');
+            }
+
+            if (currentWeapon.id === 'w1') {
+              poiseDmg = Math.round(poiseDmg * 1.25);
+              boss.knockbackVx = Math.cos(angleToBoss) * 10;
+              boss.knockbackVy = Math.sin(angleToBoss) * 10;
+            } else if (currentWeapon.id === 'w4') {
+              poiseDmg = Math.round(poiseDmg * 1.2);
+            }
 
             if (boss.state === 'staggered') {
               dmg = Math.round(currentWeapon.damage * 2.8);
@@ -1836,9 +1966,37 @@
               this.hp = Math.min(this.maxHp, this.hp + 4);
             }
 
+            if (currentWeapon.id === 'w2') {
+              this.stam = Math.min(this.maxStam, this.stam + 12);
+            }
+
+            if (currentWeapon.id === 'w3') {
+              createGroundCrack(boss.x, boss.y);
+              groundHazards.push({ x: boss.x, y: boss.y, r: 58, life: 110, color: '#f97316', dmg: 12 });
+              spawnSparks(boss.x, boss.y, 18, '#f97316');
+            }
+
+            if (currentWeapon.id === 'w7') {
+              groundHazards.push({ x: boss.x, y: boss.y, r: 95, life: 100, color: '#d97706', isVortex: true });
+            }
+
             if (currentWeapon.id === 'w4') {
               createGroundCrack(boss.x, boss.y);
               createShockwave(this.x, this.y, 70, 0, '#38bdf8', false);
+            }
+
+            if (currentWeapon.id === 'w6') {
+              let chained = 0;
+              for (let i = enemyMinions.length - 1; i >= 0 && chained < 2; i--) {
+                const m = enemyMinions[i];
+                if (Math.hypot(m.x - boss.x, m.y - boss.y) < 180) {
+                  m.hp -= 24;
+                  spawnSparks(m.x, m.y, 12, '#fde047');
+                  if (m.hp <= 0) enemyMinions.splice(i, 1);
+                  chained++;
+                }
+              }
+              if (chained > 0) spawnFloatingText(boss.x, boss.y, `CHAIN! +${chained}`, '#fde047');
             }
 
             boss.takeDamage(dmg, poiseDmg);
@@ -2199,6 +2357,7 @@
         ctx.stroke();
 
         const legBob = Math.sin(this.walkCycle) * 2;
+        const torsoWidth = this.gender === 'female' ? 9.5 : 11.5;
         ctx.fillStyle = '#0f172a';
         ctx.beginPath();
         ctx.ellipse(-6, -2 - zOffset, 5, 8, -0.15, 0, Math.PI * 2);
@@ -2206,10 +2365,10 @@
         ctx.fill();
 
         ctx.beginPath();
-        ctx.ellipse(0, -16 - zOffset + legBob, 11, 15, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, -16 - zOffset + legBob, torsoWidth, 15, 0, 0, Math.PI * 2);
         const armorGradient = ctx.createLinearGradient(0, -31 - zOffset, 0, -2 - zOffset);
         armorGradient.addColorStop(0, this.isParrying ? '#bae6fd' : '#94a3b8');
-        armorGradient.addColorStop(0.35, this.isParrying ? '#38bdf8' : (this.hasIFrames() ? '#bfdbfe' : '#64748b'));
+        armorGradient.addColorStop(0.35, this.isParrying ? '#38bdf8' : (this.hasIFrames() ? '#bfdbfe' : this.armorColor));
         armorGradient.addColorStop(1, '#1e293b');
         ctx.fillStyle = armorGradient;
         ctx.fill();
@@ -4509,6 +4668,10 @@
             </div>
             <div class="text-[10px] text-stone-400 font-mono mb-2">${w.type} • ${w.source}</div>
             <p class="text-[11px] text-stone-300 font-sans leading-tight mb-2">${w.desc}</p>
+            <div class="mb-2 px-2 py-1 rounded border border-stone-800 bg-black/30">
+              <div class="text-[9px] text-amber-300 font-mono uppercase">${w.trait || 'Unique Trait'}</div>
+              <div class="text-[10px] text-stone-400 font-sans">${w.passive || 'Unique weapon behavior.'}</div>
+            </div>
           </div>
           <div class="flex justify-between items-center text-[10px] font-mono border-t border-stone-800/80 pt-1.5 mt-1 text-stone-400">
             <span>DMG: <b class="text-red-400">${w.damage}</b></span>
@@ -4692,7 +4855,7 @@ const coop = {
       for (const id of remotePlayers.keys()) if (!ids.includes(id)) remotePlayers.delete(id);
       for (const id of ids) {
         if (id === this.playerId) continue;
-        remotePlayers.set(id, { x: player.x, y: player.y, facingAngle: 0, isRolling: false, isAttacking: false, isParrying: false, isHealing: false, weaponId: "w0", ...(players[id] || {}) });
+        remotePlayers.set(id, { x: player.x, y: player.y, facingAngle: 0, isRolling: false, isAttacking: false, isParrying: false, isHealing: false, weaponId: "w0", gender: "male", armorColor: "#475569", ...(players[id] || {}) });
       }
       rescaleBossForCoop();
       setCoopStatus(`Room ${this.roomCode} [${this.isHost() ? "HOST" : "MEMBER"}] • ${ids.length}/4`);
@@ -4712,7 +4875,7 @@ const coop = {
     });
   },
   localPlayerState() {
-    return { x: player.x, y: player.y, hp: player.hp, maxHp: player.maxHp, stam: player.stam, maxStam: player.maxStam, facingAngle: player.facingAngle, isRolling: player.isRolling, rollTimer: player.rollTimer, rollDir: player.rollDir, isAttacking: player.isAttacking, attackTimer: player.attackTimer, attackDuration: player.attackDuration, attackAngle: player.attackAngle, isParrying: player.isParrying, parryTimer: player.parryTimer, isHealing: player.isHealing, weaponId: currentWeapon.id };
+    return { x: player.x, y: player.y, hp: player.hp, maxHp: player.maxHp, stam: player.stam, maxStam: player.maxStam, facingAngle: player.facingAngle, isRolling: player.isRolling, rollTimer: player.rollTimer, rollDir: player.rollDir, isAttacking: player.isAttacking, attackTimer: player.attackTimer, attackDuration: player.attackDuration, attackAngle: player.attackAngle, isParrying: player.isParrying, parryTimer: player.parryTimer, isHealing: player.isHealing, weaponId: currentWeapon.id, gender: player.gender, armorColor: player.armorColor };
   },
   send(message) {
     if (!this.isConnected()) return;
@@ -4720,7 +4883,7 @@ const coop = {
   },
   sendAction(action) {
     if (this.applyingRemote) return;
-    this.send({ type: "player_action", action, state: { weaponId: currentWeapon.id, attackAngle: player.attackAngle, facingAngle: player.facingAngle } });
+    this.send({ type: "player_action", action, state: { weaponId: currentWeapon.id, attackAngle: player.attackAngle, facingAngle: player.facingAngle, gender: player.gender, armorColor: player.armorColor } });
   },
   sendCombat(kind, data) {
     if (this.applyingRemote) return;
@@ -4813,6 +4976,8 @@ function setCoopStatus(text) {
 function drawRemotePlayer(rp) {
   const scr = worldToScreen(rp.x, rp.y);
   const weapon = WEAPONS.find((w) => w.id === rp.weaponId) || WEAPONS[0];
+  const armorColor = rp.armorColor || "#0284c7";
+  const torsoWidth = rp.gender === "female" ? 9.5 : 11.5;
   ctx.save();
   ctx.translate(scr.x, scr.y);
 
@@ -4824,8 +4989,8 @@ function drawRemotePlayer(rp) {
 
   // Body (cyan tint so you can tell co-op partner apart)
   ctx.beginPath();
-  ctx.ellipse(0, -16, 11, 15, 0, 0, Math.PI * 2);
-  ctx.fillStyle = "#0284c7";
+  ctx.ellipse(0, -16, torsoWidth, 15, 0, 0, Math.PI * 2);
+  ctx.fillStyle = armorColor;
   ctx.fill();
   ctx.strokeStyle = "#e0f2fe";
   ctx.lineWidth = 2;
