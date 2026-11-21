@@ -1042,13 +1042,13 @@
         id: 5,
         name: 'Sylvanas, The Twisted Thorn',
         title: 'Sylvanas',
-        hp: 1450,
+        hp: 2500,
         radius: 34,
-        speed: 1.4,
+        speed: 1.65,
         color: '#15803d',
         eyeColor: '#4ade80',
         weaponDropId: 'w5',
-        attacks: ['creeping_vines', 'spore_pods', 'bramble_whip', 'thorn_barrage'],
+        attacks: ['creeping_vines', 'spore_pods', 'bramble_whip', 'thorn_barrage', 'clone_split', 'meteor_shower', 'laser_beam'],
         arena: {
           locationName: 'The Blighted Arbor',
           floorColor: '#061309',
@@ -1150,13 +1150,13 @@
         id: 9,
         name: 'Gorgon, The Cursed Chimera',
         title: 'Gorgon',
-        hp: 1950,
-        radius: 44,
-        speed: 1.5,
+        hp: 3400,
+        radius: 46,
+        speed: 1.85,
         color: '#881337',
         eyeColor: '#fb7185',
         weaponDropId: 'w9',
-        attacks: ['flame_breath', 'pounce_combo', 'claw_frenzy', 'flame_trail'],
+        attacks: ['flame_breath', 'pounce_combo', 'claw_frenzy', 'flame_trail', 'clone_split', 'meteor_shower', 'laser_beam'],
         arena: {
           locationName: 'Den of the Gorgon Beast',
           floorColor: '#17050a',
@@ -1185,7 +1185,7 @@
         weaponDropId: 'w10',
         hasWipe: true,
         wipeName: 'Apocalyptic Cataclysm',
-        attacks: ['starfall_rain', 'apocalyptic_cataclysm', 'clone_mimic', 'celestial_orbs', 'spear_lance', 'gravity_wave'],
+        attacks: ['starfall_rain', 'apocalyptic_cataclysm', 'clone_mimic', 'celestial_orbs', 'spear_lance', 'gravity_wave', 'clone_split', 'meteor_shower', 'laser_beam'],
         arena: {
           locationName: 'Sanctum of the First Sovereign',
           floorColor: '#0d0a06',
@@ -1927,7 +1927,8 @@
               poiseDmg = Math.round(poiseDmg * 1.2);
             }
 
-            if (boss.state === 'staggered') {
+            if (boss.state === 'staggered' && !boss.riposteUsed) {
+              boss.riposteUsed = true; // ← guard: only ONE riposte per stagger window
               dmg = Math.round(currentWeapon.damage * 2.8);
               poiseDmg = 0;
               triggerScreenShake(26);
@@ -1945,6 +1946,10 @@
               boss.timer = 45;
               boss.poise = 0;
               centerPrompt.classList.add('hidden');
+              boss.takeDamage(dmg, 0);
+              coop.sendCombat("boss_riposted", { damage: dmg, kbAngle });
+              this.hasHitConnected = true;
+              return;
             } else {
               triggerScreenShake(7);
               spawnSparks(boss.x, boss.y, 14, currentWeapon.color);
@@ -1998,6 +2003,44 @@
             boss.takeDamage(dmg, poiseDmg);
             coop.sendCombat("boss_hit", { damage: dmg, poiseDamage: poiseDmg });
             this.hasHitConnected = true;
+          }
+        }
+
+        // Check against boss clones during clone split
+        if (boss.cloneSplitActive && Array.isArray(boss.cloneSplitClones)) {
+          for (let i = boss.cloneSplitClones.length - 1; i >= 0; i--) {
+            const c = boss.cloneSplitClones[i];
+            const dist = Math.hypot(c.x - this.x, c.y - this.y);
+            if (dist <= currentWeapon.reach + boss.radius) {
+              const angleToClone = Math.atan2(c.y - this.y, c.x - this.x);
+              let diff = Math.abs(angleToClone - this.attackAngle);
+              while (diff > Math.PI) diff -= Math.PI * 2;
+              if (Math.abs(diff) < Math.PI / 1.7) {
+                if (c.isReal) {
+                  const dmg = Math.round(currentWeapon.damage * 1.5);
+                  boss.x = c.x;
+                  boss.y = c.y;
+                  boss.cloneSplitActive = false;
+                  boss.cloneSplitClones = [];
+                  boss.state = 'cooldown';
+                  boss.timer = 55;
+                  boss.takeDamage(dmg, currentWeapon.poiseDmg);
+                  sound.playStaggerBreak();
+                  triggerScreenShake(24);
+                  spawnSparks(c.x, c.y, 45, '#fef08a');
+                  spawnFloatingText(c.x, c.y, `REAL BOSS STRUCK! -${dmg}`, '#fef08a');
+                  coop.sendCombat("clone_real_hit", { x: c.x, y: c.y, damage: dmg, poiseDamage: currentWeapon.poiseDmg });
+                } else {
+                  spawnSparks(c.x, c.y, 22, '#94a3b8');
+                  spawnFloatingText(c.x, c.y, 'ILLUSION!', '#cbd5e1');
+                  sound.playHit();
+                  boss.cloneSplitClones.splice(i, 1);
+                  coop.sendCombat("clone_illusion_hit", { index: i });
+                }
+                this.hasHitConnected = true;
+                break;
+              }
+            }
           }
         }
 
@@ -2491,7 +2534,10 @@
         clone_mimic: ['Clone Mimic', '#c084fc', 'SUMMON'],
         celestial_orbs: ['Celestial Orbs', '#fef08a', 'PROJECTILE'],
         spear_lance: ['Spear Lance', '#fef08a', 'PROJECTILE'],
-        gravity_wave: ['Gravity Wave', '#c084fc', 'GROUND']
+        gravity_wave: ['Gravity Wave', '#c084fc', 'GROUND'],
+        clone_split: ['Clone Split', '#4ade80', 'SUMMON'],
+        meteor_shower: ['Meteor Shower', '#f97316', 'GROUND'],
+        laser_beam: ['Laser Beam', '#ef4444', 'CONE']
       };
       return attacks[type] || ['Attack', '#ef4444', 'MELEE'];
     }
@@ -2519,6 +2565,13 @@
       orbitingOrbs: [],
       knockbackVx: 0,
       knockbackVy: 0,
+      lockedTarget: null,       // co-op: locked target player for current attack
+      laserAngle: 0,            // laser beam sweep angle
+      laserTimer: 0,            // laser beam duration
+      cloneSplitActive: false,  // true while clone split mechanic is live
+      cloneSplitClones: [],     // array of fake clone objects
+      realCloneIdx: 0,          // which clone index is real
+      meteorWarnings: [],       // pending meteor impacts
 
       loadBoss(index) {
         this.profile = BOSS_ROSTER[index];
@@ -2536,6 +2589,13 @@
         this.orbitingOrbs = [];
         this.knockbackVx = 0;
         this.knockbackVy = 0;
+        this.lockedTarget = null;
+        this.laserAngle = 0;
+        this.laserTimer = 0;
+        this.cloneSplitActive = false;
+        this.cloneSplitClones = [];
+        this.realCloneIdx = 0;
+        this.meteorWarnings = [];
 
         currentArenaPillars = this.profile.arena ? this.profile.arena.pillars : [];
 
@@ -2578,9 +2638,21 @@
           spawnSparks(this.x, this.y, 45, this.profile.eyeColor);
         }
 
-        this.facingAngle = Math.atan2(player.y - this.y, player.x - this.x);
+        // ── Target-lock: pick nearest player (local or remote) for smooth co-op targeting ──
+        // Only re-evaluate when idle/cooldown — holds the same target for the full attack sequence.
+        if (this.state === 'idle' || this.state === 'cooldown') {
+          let nearestDist = Math.hypot(player.x - this.x, player.y - this.y);
+          let nearestPos = { x: player.x, y: player.y };
+          remotePlayers.forEach(rp => {
+            const d = Math.hypot(rp.x - this.x, rp.y - this.y);
+            // Only switch target if the other player is SIGNIFICANTLY closer (60-px hysteresis)
+            if (d < nearestDist - 60) { nearestDist = d; nearestPos = { x: rp.x, y: rp.y }; }
+          });
+          this.lockedTarget = nearestPos;
+        }
+        const _tgt = this.lockedTarget || { x: player.x, y: player.y };
+        this.facingAngle = Math.atan2(_tgt.y - this.y, _tgt.x - this.x);
         this.timer--;
-
         // Orbiting Orbs (Nyx & Primordial Ascendant) — UNPARRIABLE (parriable = false)
         this.orbitingOrbs.forEach(orb => {
           orb.angle += 0.05;
@@ -2598,7 +2670,8 @@
           this.y += Math.sin(this.facingAngle) * moveSpeed;
 
           if (this.timer <= 0) {
-            const dist = Math.hypot(player.x - this.x, player.y - this.y);
+            const tgtPos = this.lockedTarget || { x: player.x, y: player.y };
+            const dist = Math.hypot(tgtPos.x - this.x, tgtPos.y - this.y);
             const hasAttack = this.selectNextAttack(dist);
             if (!hasAttack) {
               this.timer = 20;
@@ -2606,7 +2679,8 @@
           }
         } else if (this.state === 'windup') {
           if (this.timer > 18) {
-            this.targetPos = { x: player.x, y: player.y };
+            const t = this.lockedTarget || { x: player.x, y: player.y };
+            this.targetPos = { x: t.x, y: t.y };
           }
           if (this.timer <= 0) {
             this.executeCurrentAttack();
@@ -2706,6 +2780,51 @@
             this.poise = 0;
             centerPrompt.classList.add('hidden');
           }
+        } else if (this.state === 'laser_active') {
+          // ── Laser Beam: sweeping beam, players must hide behind pillars ──
+          this.laserTimer--;
+          this.laserAngle += 0.028; // sweep speed
+          const lx = this.x + Math.cos(this.laserAngle) * 320;
+          const ly = this.y + Math.sin(this.laserAngle) * 320;
+          // Check if player is in the laser path and NOT sheltered
+          const laserHalfWidth = 28;
+          const toPx = player.x - this.x, toPy = player.y - this.y;
+          const laserDirX = Math.cos(this.laserAngle), laserDirY = Math.sin(this.laserAngle);
+          const dot = toPx * laserDirX + toPy * laserDirY;
+          if (dot > 0) {
+            const crossX = toPx - dot * laserDirX, crossY = toPy - dot * laserDirY;
+            const perpDist = Math.hypot(crossX, crossY);
+            if (perpDist < laserHalfWidth && this.laserTimer % 4 === 0) {
+              const sheltered = isBlockedByPillars(this.x, this.y, player.x, player.y);
+              if (!sheltered) player.takeDamage(18, false, 'boss');
+            }
+          }
+          // Spawn laser glow particles along beam
+          if (this.laserTimer % 2 === 0) {
+            const dist = Math.random() * 300 + 20;
+            spawnSparks(this.x + Math.cos(this.laserAngle) * dist, this.y + Math.sin(this.laserAngle) * dist, 2, '#ef4444');
+          }
+          if (this.laserTimer <= 0) {
+            this.state = 'cooldown';
+            this.timer = 55;
+          }
+        } else if (this.state === 'clone_split_active') {
+          // ── Clone Split: boss is hidden; clones move around; real clone takes damage ──
+          if (this.cloneSplitClones.length === 0 || this.timer <= 0) {
+            // End clone phase — real boss reappears
+            this.cloneSplitActive = false;
+            this.cloneSplitClones = [];
+            this.state = 'cooldown';
+            this.timer = 70;
+            spawnSparks(this.x, this.y, 30, this.profile.eyeColor);
+            spawnFloatingText(this.x, this.y, 'TRUE FORM REVEALED!', '#fef08a');
+          }
+        } else if (this.state === 'meteor_active') {
+          // meteor warnings are handled by meteors in groundHazards; just wait
+          if (this.timer <= 0) {
+            this.state = 'cooldown';
+            this.timer = 55;
+          }
         }
 
         currentArenaPillars.forEach(p => {
@@ -2735,7 +2854,8 @@
           'spore_pods', 'quicksand_vortex', 'starfall_rain', 'clone_mimic', 'celestial_orbs',
           'stalagmite_spikes', 'void_rifts', 'iron_cannon', 'shadow_pulse', 'dash_flurry',
           'frost_nova', 'thorn_barrage', 'lightning_chain', 'sand_lance', 'void_lance',
-          'flame_trail', 'spear_lance', 'gravity_wave'
+          'flame_trail', 'spear_lance', 'gravity_wave',
+          'clone_split', 'meteor_shower', 'laser_beam'
         ];
         const wipeAttacks = ['solar_supernova', 'apocalyptic_cataclysm'];
         
@@ -2782,7 +2902,8 @@
         }
 
         this.state = 'windup';
-        this.targetPos = { x: player.x, y: player.y };
+        const _t = this.lockedTarget || { x: player.x, y: player.y };
+        this.targetPos = { x: _t.x, y: _t.y };
 
         if (chosen === 'whirlwind') {
           this.timer = 50;
@@ -2794,6 +2915,12 @@
           this.timer = 45;
         } else if (chosen === 'quicksand_vortex') {
           this.timer = 55;
+        } else if (chosen === 'clone_split') {
+          this.timer = 70;
+        } else if (chosen === 'meteor_shower') {
+          this.timer = 60;
+        } else if (chosen === 'laser_beam') {
+          this.timer = 50;
         } else {
           this.timer = this.phase === 2 ? 42 : 58;
         }
@@ -2803,6 +2930,80 @@
 
       executeCurrentAttack() {
         const atk = this.currentAttackType;
+
+        // ── NEW: Clone Split ──────────────────────────────────────────────────
+        if (atk === 'clone_split') {
+          this.state = 'clone_split_active';
+          this.timer = 420; // 7 seconds to find the real clone
+          this.cloneSplitActive = true;
+          this.cloneSplitClones = [];
+          // Pick a random real clone index
+          const cloneCount = 4;
+          this.realCloneIdx = Math.floor(Math.random() * cloneCount);
+          // Scatter 4 clones around the arena
+          for (let i = 0; i < cloneCount; i++) {
+            const angle = (Math.PI * 2 * i) / cloneCount + Math.random() * 0.4;
+            const dist = 160 + Math.random() * 60;
+            this.cloneSplitClones.push({
+              x: Math.cos(angle) * dist,
+              y: Math.sin(angle) * dist,
+              isReal: i === this.realCloneIdx,
+              hp: 1,
+              angle: Math.random() * Math.PI * 2
+            });
+          }
+          // Move real boss off-screen (invisible)
+          this.x = 9999; this.y = 9999;
+          spawnSparks(0, 0, 40, this.profile.eyeColor);
+          sound.playWhoosh(300);
+          spawnFloatingText(0, 0, 'FIND THE REAL ONE!', '#fef08a');
+          return;
+        }
+
+        // ── NEW: Meteor Shower ───────────────────────────────────────────────
+        if (atk === 'meteor_shower') {
+          this.state = 'meteor_active';
+          this.timer = 240; // 4 seconds of meteors
+          sound.playWhoosh(500);
+          spawnFloatingText(this.x, this.y, 'METEOR SHOWER!', '#f97316');
+          // Spawn 6 meteors staggered over 4 seconds
+          for (let i = 0; i < 8; i++) {
+            setTimeout(() => {
+              if (scene !== 'arena' || gameState !== 'playing') return;
+              // Target near a random player
+              const targets = [{ x: player.x, y: player.y }];
+              remotePlayers.forEach(rp => targets.push({ x: rp.x, y: rp.y }));
+              const tgt = targets[Math.floor(Math.random() * targets.length)];
+              const mx = tgt.x + (Math.random() * 160 - 80);
+              const my = tgt.y + (Math.random() * 160 - 80);
+              // Show warning zone first (yellow), then slam (red)
+              groundHazards.push({ x: mx, y: my, r: 55, life: 55, color: '#fef08a', dmg: 0, isMeteorWarning: true });
+              setTimeout(() => {
+                if (scene !== 'arena' || gameState !== 'playing') return;
+                groundHazards.push({ x: mx, y: my, r: 55, life: 80, color: '#f97316', dmg: 50 });
+                triggerScreenShake(18);
+                spawnSparks(mx, my, 25, '#f97316');
+                sound.playSlam();
+                // Immediate damage check
+                if (Math.hypot(player.x - mx, player.y - my) < 55) {
+                  player.takeDamage(50, false, 'boss');
+                }
+              }, 950);
+            }, i * 480);
+          }
+          return;
+        }
+
+        // ── NEW: Laser Beam ──────────────────────────────────────────────────
+        if (atk === 'laser_beam') {
+          this.state = 'laser_active';
+          this.laserAngle = this.facingAngle - Math.PI * 0.65; // start behind player
+          this.laserTimer = 200;
+          sound.playWhoosh(240);
+          spawnFloatingText(this.x, this.y, 'HIDE BEHIND PILLAR!', '#ef4444');
+          triggerScreenShake(10);
+          return;
+        }
 
         if (atk === 'whirlwind') {
           this.state = 'whirlwind_active';
@@ -3303,6 +3504,7 @@
         if (this.poise >= this.maxPoise && this.state !== 'staggered' && this.state !== 'wipe_charging') {
           this.state = 'staggered';
           this.timer = 135;
+          this.riposteUsed = false; // ← reset riposte guard each time posture breaks
           sound.playStaggerBreak();
           triggerScreenShake(18);
           spawnSparks(this.x, this.y, 35, '#facc15');
@@ -3316,6 +3518,7 @@
 
       draw() {
         if (scene !== 'arena') return;
+        if (this.state === 'clone_split_active') return;
         const scr = worldToScreen(this.x, this.y);
 
         if (this.state === 'windup') {
@@ -3350,7 +3553,7 @@
             'void_rifts', 'earth_tremor', 'starfall_rain', 'gravity_wave', 'shadow_pulse',
             'frost_nova', 'flame_trail'
           ];
-          const summonTypes = ['summon_imps', 'creeping_vines', 'clone_mimic'];
+          const summonTypes = ['summon_imps', 'creeping_vines', 'clone_mimic', 'clone_split', 'meteor_shower'];
           const coneTypes = [
             'cleave', 'slam', 'bramble_whip', 'thunder_thrust', 'claw_frenzy',
             'flame_breath', 'whirlwind'
@@ -3588,6 +3791,73 @@
 
         ctx.restore();
         ctx.restore();
+
+        if (this.state === 'laser_active') {
+          const lx = Math.cos(this.laserAngle);
+          const ly = Math.sin(this.laserAngle);
+          let hitDist = ARENA_RADIUS * 1.35;
+
+          currentArenaPillars.forEach(p => {
+            const vx = p.x - this.x;
+            const vy = p.y - this.y;
+            const proj = vx * lx + vy * ly;
+            if (proj > 0 && proj < hitDist) {
+              const perpSq = (vx - proj * lx) ** 2 + (vy - proj * ly) ** 2;
+              if (perpSq <= (p.r * 0.95) ** 2) {
+                const entryDist = proj - Math.sqrt(Math.max(0, (p.r * 0.95) ** 2 - perpSq));
+                if (entryDist > 0 && entryDist < hitDist) {
+                  hitDist = entryDist;
+                }
+              }
+            }
+          });
+
+          const endX = this.x + lx * hitDist;
+          const endY = this.y + ly * hitDist;
+          const startScr = worldToScreen(this.x, this.y);
+          const endScr = worldToScreen(endX, endY);
+
+          ctx.save();
+          // Wide outer beam aura
+          ctx.beginPath();
+          ctx.moveTo(startScr.x, startScr.y - 32);
+          ctx.lineTo(endScr.x, endScr.y - 20 * Y_SQUASH);
+          ctx.strokeStyle = 'rgba(239, 68, 68, 0.28)';
+          ctx.lineWidth = 38;
+          ctx.stroke();
+
+          // Intense glowing beam body
+          ctx.beginPath();
+          ctx.moveTo(startScr.x, startScr.y - 32);
+          ctx.lineTo(endScr.x, endScr.y - 20 * Y_SQUASH);
+          ctx.strokeStyle = '#f87171';
+          ctx.lineWidth = 18;
+          ctx.shadowColor = '#ef4444';
+          ctx.shadowBlur = 24;
+          ctx.stroke();
+
+          // Blinding white core
+          ctx.beginPath();
+          ctx.moveTo(startScr.x, startScr.y - 32);
+          ctx.lineTo(endScr.x, endScr.y - 20 * Y_SQUASH);
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 6;
+          ctx.shadowBlur = 0;
+          ctx.stroke();
+
+          // Impact spark flare
+          ctx.beginPath();
+          ctx.arc(endScr.x, endScr.y - 20 * Y_SQUASH, 14, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowColor = '#f87171';
+          ctx.shadowBlur = 18;
+          ctx.fill();
+          ctx.restore();
+
+          if (Math.random() < 0.6) {
+            spawnSparks(endX, endY, 4, '#f87171');
+          }
+        }
       }
     };
 
@@ -3883,9 +4153,9 @@
           ctx.stroke();
         });
 
-        if (boss.state === 'wipe_charging' && activeWipeAttack) {
-          const bx = activeWipeAttack.bossX;
-          const by = activeWipeAttack.bossY;
+        if ((boss.state === 'wipe_charging' && activeWipeAttack) || boss.state === 'laser_active') {
+          const bx = boss.state === 'laser_active' ? boss.x : activeWipeAttack.bossX;
+          const by = boss.state === 'laser_active' ? boss.y : activeWipeAttack.bossY;
 
           ctx.fillStyle = 'rgba(239, 68, 68, 0.14)';
           ctx.fillRect(centerScr.x - ARENA_RADIUS, centerScr.y - ARENA_RADIUS, ARENA_RADIUS * 2, ARENA_RADIUS * 2);
@@ -4453,6 +4723,90 @@
       ctx.restore();
     }
 
+    function drawBossClone(clone, idx) {
+      const scr = worldToScreen(clone.x, clone.y);
+      ctx.save();
+      ctx.translate(scr.x, scr.y);
+
+      // Clone ground shadow
+      ctx.beginPath();
+      ctx.ellipse(0, 4, boss.radius * 1.15, boss.radius * Y_SQUASH * 0.85, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fill();
+
+      // Aura
+      const auraPulse = 0.18 + Math.sin(Date.now() * 0.005 + idx) * 0.06;
+      ctx.beginPath();
+      ctx.ellipse(0, -42, boss.radius * 1.35, boss.radius * Y_SQUASH * 1.5, 0, 0, Math.PI * 2);
+      ctx.fillStyle = boss.profile.eyeColor;
+      ctx.globalAlpha = clone.isReal ? (auraPulse + 0.1) : (auraPulse * 0.7);
+      ctx.shadowColor = boss.profile.eyeColor;
+      ctx.shadowBlur = clone.isReal ? 22 : 12;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+
+      // Draw Boss Signature / Armour
+      drawBossSignature(boss.profile, boss.radius, 0, boss.phase);
+
+      ctx.beginPath();
+      ctx.ellipse(0, -36, boss.radius * 0.6, boss.radius * 0.8, 0, 0, Math.PI * 2);
+      ctx.fillStyle = boss.profile.color;
+      ctx.fill();
+      ctx.strokeStyle = '#09090b';
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+
+      ctx.fillStyle = boss.phase === 2 ? boss.profile.eyeColor : '#27272a';
+      ctx.beginPath();
+      ctx.ellipse(-boss.radius * 0.62, -45, boss.radius * 0.42, 9, -0.18, 0, Math.PI * 2);
+      ctx.ellipse(boss.radius * 0.62, -45, boss.radius * 0.42, 9, 0.18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#09090b';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Head
+      ctx.beginPath();
+      ctx.arc(0, -68, boss.radius * 0.38, 0, Math.PI * 2);
+      ctx.fillStyle = '#18181b';
+      ctx.fill();
+      ctx.stroke();
+
+      // Eyes
+      ctx.fillStyle = boss.profile.eyeColor;
+      ctx.shadowColor = ctx.fillStyle;
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(-6, -69, 3.2, 0, Math.PI * 2);
+      ctx.arc(6, -69, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Sword
+      ctx.save();
+      ctx.translate(0, -30);
+      const swordAngle = clone.angle || (Math.PI / 2);
+      const swordLen = 60;
+      ctx.strokeStyle = boss.phase === 2 ? boss.profile.eyeColor : '#94a3b8';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(swordAngle) * 8, Math.sin(swordAngle) * 8 * Y_SQUASH);
+      ctx.lineTo(Math.cos(swordAngle) * swordLen, Math.sin(swordAngle) * swordLen * Y_SQUASH);
+      ctx.stroke();
+      ctx.restore();
+
+      // Floating Clone label
+      ctx.fillStyle = '#fef08a';
+      ctx.font = 'bold 9px Cinzel';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = '#000';
+      ctx.shadowBlur = 5;
+      ctx.fillText(`CLONE #${idx + 1}`, 0, -boss.height - 24);
+
+      ctx.restore();
+    }
+
     /* ==========================================================================
        Y-SORTING DEPTH BUFFER
        ========================================================================== */
@@ -4466,7 +4820,13 @@
       });
 
       if (scene === 'arena') {
-        renderQueue.push({ type: 'boss', y: boss.y, draw: () => boss.draw() });
+        if (!boss.cloneSplitActive) {
+          renderQueue.push({ type: 'boss', y: boss.y, draw: () => boss.draw() });
+        } else if (Array.isArray(boss.cloneSplitClones)) {
+          boss.cloneSplitClones.forEach((clone, idx) => {
+            renderQueue.push({ type: 'clone', y: clone.y, draw: () => drawBossClone(clone, idx) });
+          });
+        }
         currentArenaPillars.forEach(p => {
           renderQueue.push({ type: 'pillar', y: p.y, draw: () => drawPillar(p) });
         });
@@ -4984,6 +5344,39 @@ const coop = {
       const damage = Number(msg.data.damage);
       const poiseDamage = Number(msg.data.poiseDamage);
       if (Number.isFinite(damage) && Number.isFinite(poiseDamage)) boss.takeDamage(damage, poiseDamage);
+    } else if (msg.kind === "boss_riposted") {
+      const damage = Number(msg.data.damage) || 50;
+      boss.riposteUsed = true;
+      boss.state = 'cooldown';
+      boss.timer = 45;
+      boss.poise = 0;
+      centerPrompt.classList.add('hidden');
+      if (Number.isFinite(msg.data.kbAngle)) {
+        boss.knockbackVx = Math.cos(msg.data.kbAngle) * 18;
+        boss.knockbackVy = Math.sin(msg.data.kbAngle) * 18;
+      }
+      boss.takeDamage(damage, 0);
+      spawnSparks(boss.x, boss.y, 35, '#fbbf24');
+      sound.playStaggerBreak();
+      spawnFloatingText(boss.x, boss.y, `ALLY RIPOSTE! -${damage}`, '#facc15');
+    } else if (msg.kind === "clone_real_hit") {
+      boss.x = Number(msg.data.x) || 0;
+      boss.y = Number(msg.data.y) || 0;
+      boss.cloneSplitActive = false;
+      boss.cloneSplitClones = [];
+      boss.state = 'cooldown';
+      boss.timer = 55;
+      boss.takeDamage(Number(msg.data.damage) || 40, Number(msg.data.poiseDamage) || 20);
+      spawnSparks(boss.x, boss.y, 45, '#fef08a');
+      sound.playStaggerBreak();
+      spawnFloatingText(boss.x, boss.y, 'REAL BOSS FOUND!', '#fef08a');
+    } else if (msg.kind === "clone_illusion_hit") {
+      const index = Number(msg.data.index);
+      if (Array.isArray(boss.cloneSplitClones) && boss.cloneSplitClones[index]) {
+        const c = boss.cloneSplitClones[index];
+        spawnSparks(c.x, c.y, 20, '#94a3b8');
+        boss.cloneSplitClones.splice(index, 1);
+      }
     } else if (msg.kind === "minion_hit") {
       const index = Number(msg.data.index);
       const damage = Number(msg.data.damage);
@@ -5008,9 +5401,14 @@ const coop = {
   },
   applyWorldSync(state) {
     if (!state || scene !== state.scene || this.isHost() || scene !== "arena" || !state.boss) return;
-    ["x", "y", "hp", "maxHp", "poise", "phase", "timer"].forEach((key) => { if (Number.isFinite(state.boss[key])) boss[key] = state.boss[key]; });
+    ["x", "y", "hp", "maxHp", "poise", "phase", "timer", "facingAngle", "laserAngle", "laserTimer"].forEach((key) => {
+      if (Number.isFinite(state.boss[key])) boss[key] = state.boss[key];
+    });
     if (typeof state.boss.state === "string") boss.state = state.boss.state;
     if (typeof state.boss.currentAttackType === "string") boss.currentAttackType = state.boss.currentAttackType;
+    if (typeof state.boss.riposteUsed === "boolean") boss.riposteUsed = state.boss.riposteUsed;
+    if (typeof state.boss.cloneSplitActive === "boolean") boss.cloneSplitActive = state.boss.cloneSplitActive;
+    if (Array.isArray(state.boss.cloneSplitClones)) boss.cloneSplitClones = state.boss.cloneSplitClones;
     if (state.wipe) {
       activeWipeAttack = {
         maxTimer: Number.isFinite(state.wipe.maxTimer) ? state.wipe.maxTimer : 260,
@@ -5032,10 +5430,26 @@ const coop = {
     this.tick++;
     if (this.tick % 2 !== 0) return;
     this.playersRef.child(this.playerId).set(this.localPlayerState()).catch(() => {});
-    if (this.isHost() && this.tick % 6 === 0 && scene === "arena") {
+    if (this.isHost() && this.tick % 4 === 0 && scene === "arena") {
       this.worldRef.set({
         scene,
-        boss: { x: boss.x, y: boss.y, hp: boss.hp, maxHp: boss.maxHp, poise: boss.poise, phase: boss.phase, state: boss.state, timer: boss.timer, currentAttackType: boss.currentAttackType },
+        boss: {
+          x: boss.x,
+          y: boss.y,
+          facingAngle: boss.facingAngle,
+          laserAngle: boss.laserAngle,
+          laserTimer: boss.laserTimer,
+          hp: boss.hp,
+          maxHp: boss.maxHp,
+          poise: boss.poise,
+          phase: boss.phase,
+          state: boss.state,
+          timer: boss.timer,
+          currentAttackType: boss.currentAttackType,
+          riposteUsed: Boolean(boss.riposteUsed),
+          cloneSplitActive: Boolean(boss.cloneSplitActive),
+          cloneSplitClones: boss.cloneSplitClones || []
+        },
         projectiles: bossProjectiles,
         minions: enemyMinions,
         hazards: groundHazards,
