@@ -1263,6 +1263,13 @@
         r: 28,
         label: 'Weapon Arsenal (Inspect Relics)'
       },
+      wardrobe: {
+        x: 180,
+        y: -40,
+        r: 32,
+        label: 'Open Character Wardrobe',
+        key: 'wardrobe'
+      },
       crestfallen: {
         x: 180,
         y: 70,
@@ -2357,7 +2364,11 @@
         ctx.stroke();
 
         const legBob = Math.sin(this.walkCycle) * 2;
-        const torsoWidth = this.gender === 'female' ? 9.5 : 11.5;
+        const isFemale = this.gender === 'female';
+        const torsoWidth = isFemale ? 10.5 : 13.5;
+        const shoulderWidth = isFemale ? 10 : 15;
+        const hipWidth = isFemale ? 8 : 6;
+        const headRadius = isFemale ? 6.6 : 7.8;
         ctx.fillStyle = '#0f172a';
         ctx.beginPath();
         ctx.ellipse(-6, -2 - zOffset, 5, 8, -0.15, 0, Math.PI * 2);
@@ -2376,6 +2387,20 @@
         ctx.lineWidth = 2;
         ctx.stroke();
 
+        ctx.beginPath();
+        ctx.ellipse(-11, -20 - zOffset + legBob, shoulderWidth * 0.45, 7.5, -0.35, 0, Math.PI * 2);
+        ctx.ellipse(11, -20 - zOffset + legBob, shoulderWidth * 0.45, 7.5, 0.35, 0, Math.PI * 2);
+        ctx.fillStyle = this.isParrying ? '#7dd3fc' : this.armorColor;
+        ctx.fill();
+        ctx.strokeStyle = '#0f172a';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.ellipse(-5.5, -4 - zOffset, hipWidth, 6.5, -0.08, 0, Math.PI * 2);
+        ctx.ellipse(5.5, -4 - zOffset, hipWidth, 6.5, 0.08, 0, Math.PI * 2);
+        ctx.fillStyle = '#111827';
+        ctx.fill();
+
         ctx.fillStyle = this.isParrying ? '#7dd3fc' : '#475569';
         ctx.beginPath();
         ctx.ellipse(-10, -20 - zOffset + legBob, 5, 8, -0.35, 0, Math.PI * 2);
@@ -2385,13 +2410,36 @@
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.arc(0, -32 - zOffset + legBob, 7.5, 0, Math.PI * 2);
+        ctx.arc(0, -32 - zOffset + legBob, isFemale ? 6.6 : 7.8, 0, Math.PI * 2);
         const helmetGradient = ctx.createRadialGradient(-2, -35 - zOffset, 1, 0, -32 - zOffset, 9);
         helmetGradient.addColorStop(0, this.hasIFrames() ? '#dbeafe' : '#cbd5e1');
         helmetGradient.addColorStop(1, '#475569');
         ctx.fillStyle = helmetGradient;
         ctx.fill();
         ctx.stroke();
+
+        if (isFemale) {
+          ctx.beginPath();
+          ctx.moveTo(-7, -34 - zOffset + legBob);
+          ctx.quadraticCurveTo(-10, -25 - zOffset + legBob, -5, -20 - zOffset + legBob);
+          ctx.quadraticCurveTo(-2, -29 - zOffset + legBob, 1, -37 - zOffset + legBob);
+          ctx.closePath();
+          ctx.moveTo(7, -34 - zOffset + legBob);
+          ctx.quadraticCurveTo(10, -25 - zOffset + legBob, 5, -20 - zOffset + legBob);
+          ctx.quadraticCurveTo(2, -29 - zOffset + legBob, -1, -37 - zOffset + legBob);
+          ctx.closePath();
+          ctx.fillStyle = '#1f2937';
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-8, -35 - zOffset + legBob);
+          ctx.lineTo(-11, -40 - zOffset + legBob);
+          ctx.moveTo(8, -35 - zOffset + legBob);
+          ctx.lineTo(11, -40 - zOffset + legBob);
+          ctx.stroke();
+        }
 
         const visorX = Math.cos(this.facingAngle) * 4;
         const visorY = Math.sin(this.facingAngle) * 3;
@@ -4057,6 +4105,57 @@
       ctx.restore();
     }
 
+    function drawWardrobe(wd) {
+      const scr = worldToScreen(wd.x, wd.y);
+      ctx.save();
+      ctx.translate(scr.x, scr.y);
+
+      ctx.beginPath();
+      ctx.ellipse(0, 2, 34, 34 * Y_SQUASH, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.58)';
+      ctx.fill();
+
+      ctx.fillStyle = '#241a12';
+      ctx.fillRect(-30, -72, 60, 72);
+      ctx.strokeStyle = '#8a5a32';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(-30, -72, 60, 72);
+
+      ctx.fillStyle = '#1c1917';
+      ctx.fillRect(-24, -66, 48, 58);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, -66);
+      ctx.lineTo(0, -8);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(-7, -38, 3, 0, Math.PI * 2);
+      ctx.arc(7, -38, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#94a3b8';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(-17, -8);
+      ctx.lineTo(-17, 4);
+      ctx.lineTo(-9, 4);
+      ctx.lineTo(-9, -8);
+      ctx.moveTo(9, -8);
+      ctx.lineTo(9, 4);
+      ctx.lineTo(17, 4);
+      ctx.lineTo(17, -8);
+      ctx.fillStyle = '#451a03';
+      ctx.fill();
+
+      ctx.fillStyle = '#7dd3fc';
+      ctx.font = '9px Cinzel';
+      ctx.textAlign = 'center';
+      ctx.fillText('WARDROBE', 0, -80);
+
+      ctx.restore();
+    }
+
     function drawCrestfallen(cf) {
       const scr = worldToScreen(cf.x, cf.y);
       ctx.save();
@@ -4414,6 +4513,7 @@
         renderQueue.push({ type: 'bonfire', y: sanctuaryProps.bonfire.y, draw: () => drawDetailedBonfire(sanctuaryProps.bonfire) });
         renderQueue.push({ type: 'fogGate', y: sanctuaryProps.fogGate.y, draw: () => drawFogGate(sanctuaryProps.fogGate) });
         renderQueue.push({ type: 'weaponRack', y: sanctuaryProps.weaponRack.y, draw: () => drawWeaponRack(sanctuaryProps.weaponRack) });
+        renderQueue.push({ type: 'wardrobe', y: sanctuaryProps.wardrobe.y, draw: () => drawWardrobe(sanctuaryProps.wardrobe) });
 
         renderQueue.push({ type: 'crestfallen', y: sanctuaryProps.crestfallen.y, draw: () => drawCrestfallen(sanctuaryProps.crestfallen) });
         renderQueue.push({ type: 'fireKeeper', y: sanctuaryProps.fireKeeper.y, draw: () => drawFireKeeper(sanctuaryProps.fireKeeper) });
@@ -4482,6 +4582,8 @@
         enterBossArena();
       } else if (prop.key === 'weaponRack') {
         toggleArsenalModal(true);
+      } else if (prop.key === 'wardrobe') {
+        toggleWardrobeModal(true);
       } else if (prop.dialogues) {
         openNpcDialogue(prop);
       }
@@ -4977,7 +5079,9 @@ function drawRemotePlayer(rp) {
   const scr = worldToScreen(rp.x, rp.y);
   const weapon = WEAPONS.find((w) => w.id === rp.weaponId) || WEAPONS[0];
   const armorColor = rp.armorColor || "#0284c7";
-  const torsoWidth = rp.gender === "female" ? 9.5 : 11.5;
+  const isFemale = rp.gender === "female";
+  const torsoWidth = isFemale ? 10.5 : 13.5;
+  const headRadius = isFemale ? 6.6 : 7.8;
   ctx.save();
   ctx.translate(scr.x, scr.y);
 
@@ -4996,13 +5100,44 @@ function drawRemotePlayer(rp) {
   ctx.lineWidth = 2;
   ctx.stroke();
 
+  ctx.beginPath();
+  ctx.ellipse(-11, -20, isFemale ? 4.5 : 7, 7, -0.35, 0, Math.PI * 2);
+  ctx.ellipse(11, -20, isFemale ? 4.5 : 7, 7, 0.35, 0, Math.PI * 2);
+  ctx.fillStyle = armorColor;
+  ctx.fill();
+  ctx.strokeStyle = "#0f172a";
+  ctx.stroke();
+
   // Head
   ctx.beginPath();
-  ctx.arc(0, -32, 7.5, 0, Math.PI * 2);
+  ctx.arc(0, -32, headRadius, 0, Math.PI * 2);
   ctx.fillStyle = "#7dd3fc";
   ctx.fill();
   ctx.strokeStyle = "#0f172a";
   ctx.stroke();
+
+  if (isFemale) {
+    ctx.beginPath();
+    ctx.moveTo(-7, -34);
+    ctx.quadraticCurveTo(-11, -25, -5, -20);
+    ctx.quadraticCurveTo(-2, -29, 1, -37);
+    ctx.closePath();
+    ctx.moveTo(7, -34);
+    ctx.quadraticCurveTo(11, -25, 5, -20);
+    ctx.quadraticCurveTo(2, -29, -1, -37);
+    ctx.closePath();
+    ctx.fillStyle = "#1f2937";
+    ctx.fill();
+  } else {
+    ctx.strokeStyle = "#334155";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-8, -35);
+    ctx.lineTo(-11, -40);
+    ctx.moveTo(8, -35);
+    ctx.lineTo(11, -40);
+    ctx.stroke();
+  }
 
   if (Number.isFinite(rp.hp) && Number.isFinite(rp.maxHp) && rp.maxHp > 0) {
     ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
