@@ -1264,8 +1264,8 @@
         label: 'Weapon Arsenal (Inspect Relics)'
       },
       wardrobe: {
-        x: 180,
-        y: -40,
+        x: -280,
+        y: 120,
         r: 32,
         label: 'Open Character Wardrobe',
         key: 'wardrobe'
@@ -1318,7 +1318,6 @@
     const shrineRuins = [
       { x: -140, y: -200, r: 24, height: 80, fallen: true, angle: -0.4 },
       { x: 140, y: -200, r: 24, height: 75, fallen: true, angle: 0.35 },
-      { x: -280, y: 120, r: 28, height: 110, brokenTop: true },
       { x: 280, y: 120, r: 28, height: 95, brokenTop: true },
       { x: 130, y: -80, isGravestone: true, candles: 3 },
       { x: 220, y: -30, isGravestone: true, candles: 4 },
@@ -2365,21 +2364,23 @@
 
         const legBob = Math.sin(this.walkCycle) * 2;
         const isFemale = this.gender === 'female';
-        const torsoWidth = isFemale ? 10.5 : 13.5;
-        const shoulderWidth = isFemale ? 10 : 15;
-        const hipWidth = isFemale ? 8 : 6;
-        const headRadius = isFemale ? 6.6 : 7.8;
+        const torsoWidth = isFemale ? 10 : 12;
+        const shoulderWidth = isFemale ? 16 : 20;
+        const headRadius = isFemale ? 6.5 : 7.5;
+
+        ctx.save();
+
         ctx.fillStyle = '#0f172a';
         ctx.beginPath();
-        ctx.ellipse(-6, -2 - zOffset, 5, 8, -0.15, 0, Math.PI * 2);
-        ctx.ellipse(6, -2 - zOffset, 5, 8, 0.15, 0, Math.PI * 2);
+        ctx.ellipse(-5.5, -2 - zOffset, 4.5, 7.5, -0.12, 0, Math.PI * 2);
+        ctx.ellipse(5.5, -2 - zOffset, 4.5, 7.5, 0.12, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.beginPath();
-        ctx.ellipse(0, -16 - zOffset + legBob, torsoWidth, 15, 0, 0, Math.PI * 2);
-        const armorGradient = ctx.createLinearGradient(0, -31 - zOffset, 0, -2 - zOffset);
+        ctx.ellipse(0, -16 - zOffset + legBob, torsoWidth, 14, 0, 0, Math.PI * 2);
+        const armorGradient = ctx.createLinearGradient(0, -30 - zOffset, 0, -2 - zOffset);
         armorGradient.addColorStop(0, this.isParrying ? '#bae6fd' : '#94a3b8');
-        armorGradient.addColorStop(0.35, this.isParrying ? '#38bdf8' : (this.hasIFrames() ? '#bfdbfe' : this.armorColor));
+        armorGradient.addColorStop(0.38, this.isParrying ? '#38bdf8' : (this.hasIFrames() ? '#bfdbfe' : this.armorColor));
         armorGradient.addColorStop(1, '#1e293b');
         ctx.fillStyle = armorGradient;
         ctx.fill();
@@ -2388,58 +2389,44 @@
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.ellipse(-11, -20 - zOffset + legBob, shoulderWidth * 0.45, 7.5, -0.35, 0, Math.PI * 2);
-        ctx.ellipse(11, -20 - zOffset + legBob, shoulderWidth * 0.45, 7.5, 0.35, 0, Math.PI * 2);
-        ctx.fillStyle = this.isParrying ? '#7dd3fc' : this.armorColor;
+        ctx.ellipse(-shoulderWidth * 0.42, -20 - zOffset + legBob, shoulderWidth * 0.34, 6.5, -0.22, 0, Math.PI * 2);
+        ctx.ellipse(shoulderWidth * 0.42, -20 - zOffset + legBob, shoulderWidth * 0.34, 6.5, 0.22, 0, Math.PI * 2);
+        ctx.fillStyle = this.armorColor;
         ctx.fill();
         ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 1.5;
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.ellipse(-5.5, -4 - zOffset, hipWidth, 6.5, -0.08, 0, Math.PI * 2);
-        ctx.ellipse(5.5, -4 - zOffset, hipWidth, 6.5, 0.08, 0, Math.PI * 2);
-        ctx.fillStyle = '#111827';
+        ctx.arc(0, -32 - zOffset + legBob, headRadius, 0, Math.PI * 2);
+        ctx.fillStyle = this.hasIFrames() ? '#dbeafe' : '#94a3b8';
         ctx.fill();
-
-        ctx.fillStyle = this.isParrying ? '#7dd3fc' : '#475569';
-        ctx.beginPath();
-        ctx.ellipse(-10, -20 - zOffset + legBob, 5, 8, -0.35, 0, Math.PI * 2);
-        ctx.ellipse(10, -20 - zOffset + legBob, 5, 8, 0.35, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#0f172a';
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(0, -32 - zOffset + legBob, isFemale ? 6.6 : 7.8, 0, Math.PI * 2);
-        const helmetGradient = ctx.createRadialGradient(-2, -35 - zOffset, 1, 0, -32 - zOffset, 9);
-        helmetGradient.addColorStop(0, this.hasIFrames() ? '#dbeafe' : '#cbd5e1');
-        helmetGradient.addColorStop(1, '#475569');
-        ctx.fillStyle = helmetGradient;
-        ctx.fill();
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 2;
         ctx.stroke();
 
         if (isFemale) {
           ctx.beginPath();
-          ctx.moveTo(-7, -34 - zOffset + legBob);
-          ctx.quadraticCurveTo(-10, -25 - zOffset + legBob, -5, -20 - zOffset + legBob);
-          ctx.quadraticCurveTo(-2, -29 - zOffset + legBob, 1, -37 - zOffset + legBob);
-          ctx.closePath();
-          ctx.moveTo(7, -34 - zOffset + legBob);
-          ctx.quadraticCurveTo(10, -25 - zOffset + legBob, 5, -20 - zOffset + legBob);
-          ctx.quadraticCurveTo(2, -29 - zOffset + legBob, -1, -37 - zOffset + legBob);
+          ctx.moveTo(-headRadius + 1, -34 - zOffset + legBob);
+          ctx.quadraticCurveTo(-9, -24 - zOffset + legBob, -5, -20 - zOffset + legBob);
+          ctx.quadraticCurveTo(-2, -28 - zOffset + legBob, 0, -37 - zOffset + legBob);
+          ctx.quadraticCurveTo(2, -28 - zOffset + legBob, 5, -20 - zOffset + legBob);
+          ctx.quadraticCurveTo(9, -24 - zOffset + legBob, headRadius - 1, -34 - zOffset + legBob);
           ctx.closePath();
           ctx.fillStyle = '#1f2937';
           ctx.fill();
         } else {
+          ctx.beginPath();
+          ctx.moveTo(-headRadius + 1, -35 - zOffset + legBob);
+          ctx.lineTo(-headRadius - 2, -40 - zOffset + legBob);
+          ctx.moveTo(headRadius - 1, -35 - zOffset + legBob);
+          ctx.lineTo(headRadius + 2, -40 - zOffset + legBob);
           ctx.strokeStyle = '#334155';
           ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(-8, -35 - zOffset + legBob);
-          ctx.lineTo(-11, -40 - zOffset + legBob);
-          ctx.moveTo(8, -35 - zOffset + legBob);
-          ctx.lineTo(11, -40 - zOffset + legBob);
           ctx.stroke();
         }
+
+        ctx.restore();
 
         const visorX = Math.cos(this.facingAngle) * 4;
         const visorY = Math.sin(this.facingAngle) * 3;
@@ -5091,21 +5078,22 @@ function drawRemotePlayer(rp) {
   ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
   ctx.fill();
 
-  // Body (cyan tint so you can tell co-op partner apart)
   ctx.beginPath();
-  ctx.ellipse(0, -16, torsoWidth, 15, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, -16, torsoWidth, 14, 0, 0, Math.PI * 2);
   ctx.fillStyle = armorColor;
   ctx.fill();
   ctx.strokeStyle = "#e0f2fe";
   ctx.lineWidth = 2;
   ctx.stroke();
 
+  const shoulderWidth = isFemale ? 16 : 20;
   ctx.beginPath();
-  ctx.ellipse(-11, -20, isFemale ? 4.5 : 7, 7, -0.35, 0, Math.PI * 2);
-  ctx.ellipse(11, -20, isFemale ? 4.5 : 7, 7, 0.35, 0, Math.PI * 2);
+  ctx.ellipse(-shoulderWidth * 0.42, -20, shoulderWidth * 0.34, 6.5, -0.22, 0, Math.PI * 2);
+  ctx.ellipse(shoulderWidth * 0.42, -20, shoulderWidth * 0.34, 6.5, 0.22, 0, Math.PI * 2);
   ctx.fillStyle = armorColor;
   ctx.fill();
   ctx.strokeStyle = "#0f172a";
+  ctx.lineWidth = 1.5;
   ctx.stroke();
 
   // Head
