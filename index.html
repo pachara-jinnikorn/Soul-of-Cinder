@@ -2417,6 +2417,45 @@
         ctx.lineWidth = 2;
         ctx.stroke();
 
+        if (isFemale) {
+          ctx.beginPath();
+          ctx.arc(0, -34 - zOffset + legBob, headRadius + 2.2, Math.PI * 0.98, Math.PI * 2.02);
+          ctx.quadraticCurveTo(headRadius + 1.5, -29 - zOffset + legBob, headRadius, -20 - zOffset + legBob);
+          ctx.quadraticCurveTo(3, -27 - zOffset + legBob, -headRadius, -20 - zOffset + legBob);
+          ctx.quadraticCurveTo(-headRadius - 1.5, -29 - zOffset + legBob, -headRadius - 2.2, -34 - zOffset + legBob);
+          ctx.closePath();
+          ctx.fillStyle = '#f4d35e';
+          ctx.fill();
+          ctx.strokeStyle = '#b7791f';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(-headRadius - 1, -31 - zOffset + legBob);
+          ctx.quadraticCurveTo(-10, -21 - zOffset + legBob, -6.5, -16 - zOffset + legBob);
+          ctx.lineTo(-3.5, -19 - zOffset + legBob);
+          ctx.quadraticCurveTo(-6, -25 - zOffset + legBob, -4.5, -36 - zOffset + legBob);
+          ctx.closePath();
+          ctx.moveTo(headRadius + 1, -31 - zOffset + legBob);
+          ctx.quadraticCurveTo(10, -21 - zOffset + legBob, 6.5, -16 - zOffset + legBob);
+          ctx.lineTo(3.5, -19 - zOffset + legBob);
+          ctx.quadraticCurveTo(6, -25 - zOffset + legBob, 4.5, -36 - zOffset + legBob);
+          ctx.closePath();
+          ctx.fillStyle = '#f6c85f';
+          ctx.fill();
+          ctx.strokeStyle = '#b7791f';
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(-2, -40 - zOffset + legBob);
+          ctx.quadraticCurveTo(0, -38 - zOffset + legBob, 2, -40 - zOffset + legBob);
+          ctx.lineTo(5, -34 - zOffset + legBob);
+          ctx.lineTo(-5, -34 - zOffset + legBob);
+          ctx.closePath();
+          ctx.fillStyle = '#ffe08a';
+          ctx.fill();
+        }
+
         if (!isFemale) {
           ctx.beginPath();
           ctx.moveTo(-headRadius + 1, -35 - zOffset + legBob);
@@ -5105,6 +5144,45 @@ function drawRemotePlayer(rp) {
   ctx.fill();
   ctx.strokeStyle = "#0f172a";
   ctx.stroke();
+
+  if (isFemale) {
+    ctx.beginPath();
+    ctx.arc(0, -34, headRadius + 2.2, Math.PI * 0.98, Math.PI * 2.02);
+    ctx.quadraticCurveTo(headRadius + 1.5, -29, headRadius, -20);
+    ctx.quadraticCurveTo(3, -27, -headRadius, -20);
+    ctx.quadraticCurveTo(-headRadius - 1.5, -29, -headRadius - 2.2, -34);
+    ctx.closePath();
+    ctx.fillStyle = "#f4d35e";
+    ctx.fill();
+    ctx.strokeStyle = "#b7791f";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-headRadius - 1, -31);
+    ctx.quadraticCurveTo(-10, -21, -6.5, -16);
+    ctx.lineTo(-3.5, -19);
+    ctx.quadraticCurveTo(-6, -25, -4.5, -36);
+    ctx.closePath();
+    ctx.moveTo(headRadius + 1, -31);
+    ctx.quadraticCurveTo(10, -21, 6.5, -16);
+    ctx.lineTo(3.5, -19);
+    ctx.quadraticCurveTo(6, -25, 4.5, -36);
+    ctx.closePath();
+    ctx.fillStyle = "#f6c85f";
+    ctx.fill();
+    ctx.strokeStyle = "#b7791f";
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-2, -40);
+    ctx.quadraticCurveTo(0, -38, 2, -40);
+    ctx.lineTo(5, -34);
+    ctx.lineTo(-5, -34);
+    ctx.closePath();
+    ctx.fillStyle = "#ffe08a";
+    ctx.fill();
+  }
 
   if (!isFemale) {
     ctx.strokeStyle = "#334155";
