@@ -2625,22 +2625,28 @@
             this.timer = 50;
           }
         } else if (this.state === 'wipe_charging') {
-          activeWipeAttack.timer--;
-          wipeTimerBar.style.width = `${(activeWipeAttack.timer / activeWipeAttack.maxTimer) * 100}%`;
-
-          const sheltered = isBlockedByPillars(activeWipeAttack.bossX, activeWipeAttack.bossY, player.x, player.y);
-          if (sheltered) {
-            wipeShelterStatus.textContent = '✓ SHELTERED BEHIND PILLAR — HOLD POSITION!';
-            wipeShelterStatus.className = 'text-[11px] font-sans tracking-widest text-emerald-400 font-bold mt-0.5';
+          if (!activeWipeAttack) {
+            this.state = 'cooldown';
+            this.timer = 60;
+            wipeWarning.classList.add('hidden');
           } else {
-            wipeShelterStatus.textContent = '⚠ EXPOSED! MOVE INTO A GREEN PILLAR SHADOW CONE! ⚠';
-            wipeShelterStatus.className = 'text-[11px] font-sans tracking-widest text-amber-300 font-bold mt-0.5';
-          }
+            if (coop.isHost()) activeWipeAttack.timer--;
+            wipeTimerBar.style.width = `${(activeWipeAttack.timer / activeWipeAttack.maxTimer) * 100}%`;
 
-          if (activeWipeAttack.timer % 24 === 0) sound.playAlarmBeep(sheltered ? 320 : 520);
+            const sheltered = isBlockedByPillars(activeWipeAttack.bossX, activeWipeAttack.bossY, player.x, player.y);
+            if (sheltered) {
+              wipeShelterStatus.textContent = '✓ SHELTERED BEHIND PILLAR — HOLD POSITION!';
+              wipeShelterStatus.className = 'text-[11px] font-sans tracking-widest text-emerald-400 font-bold mt-0.5';
+            } else {
+              wipeShelterStatus.textContent = '⚠ EXPOSED! MOVE INTO A GREEN PILLAR SHADOW CONE! ⚠';
+              wipeShelterStatus.className = 'text-[11px] font-sans tracking-widest text-amber-300 font-bold mt-0.5';
+            }
 
-          if (activeWipeAttack.timer <= 0) {
-            this.triggerApocalypticWipe();
+            if (activeWipeAttack.timer % 24 === 0) sound.playAlarmBeep(sheltered ? 320 : 520);
+
+            if (coop.isHost() && activeWipeAttack.timer <= 0) {
+              this.triggerApocalypticWipe();
+            }
           }
         } else if (this.state === 'flamethrower_active') {
           this.flamethrowerTimer--;
@@ -3258,6 +3264,11 @@
       },
 
       triggerApocalypticWipe() {
+        if (!activeWipeAttack) {
+          this.state = 'cooldown';
+          this.timer = 90;
+          return;
+        }
         wipeWarning.classList.add('hidden');
         triggerScreenShake(35);
         sound.playSlam();
@@ -5000,6 +5011,18 @@ const coop = {
     ["x", "y", "hp", "maxHp", "poise", "phase", "timer"].forEach((key) => { if (Number.isFinite(state.boss[key])) boss[key] = state.boss[key]; });
     if (typeof state.boss.state === "string") boss.state = state.boss.state;
     if (typeof state.boss.currentAttackType === "string") boss.currentAttackType = state.boss.currentAttackType;
+    if (state.wipe) {
+      activeWipeAttack = {
+        maxTimer: Number.isFinite(state.wipe.maxTimer) ? state.wipe.maxTimer : 260,
+        timer: Number.isFinite(state.wipe.timer) ? state.wipe.timer : 260,
+        bossX: Number.isFinite(state.wipe.bossX) ? state.wipe.bossX : 0,
+        bossY: Number.isFinite(state.wipe.bossY) ? state.wipe.bossY : 0,
+        name: typeof state.wipe.name === "string" ? state.wipe.name : "Apocalyptic Cataclysm"
+      };
+      wipeWarning.classList.remove('hidden');
+    } else if (boss.state !== "wipe_charging") {
+      activeWipeAttack = null;
+    }
     if (Array.isArray(state.projectiles)) bossProjectiles = state.projectiles;
     if (Array.isArray(state.minions)) enemyMinions = state.minions;
     if (Array.isArray(state.hazards)) groundHazards = state.hazards;
@@ -5015,7 +5038,14 @@ const coop = {
         boss: { x: boss.x, y: boss.y, hp: boss.hp, maxHp: boss.maxHp, poise: boss.poise, phase: boss.phase, state: boss.state, timer: boss.timer, currentAttackType: boss.currentAttackType },
         projectiles: bossProjectiles,
         minions: enemyMinions,
-        hazards: groundHazards
+        hazards: groundHazards,
+        wipe: activeWipeAttack ? {
+          maxTimer: activeWipeAttack.maxTimer,
+          timer: activeWipeAttack.timer,
+          bossX: activeWipeAttack.bossX,
+          bossY: activeWipeAttack.bossY,
+          name: activeWipeAttack.name
+        } : null
       }).catch(() => {});
     }
   }
