@@ -1961,7 +1961,14 @@
 
             if (currentWeapon.id === 'w3') {
               createGroundCrack(boss.x, boss.y);
-              groundHazards.push({ x: boss.x, y: boss.y, r: 58, life: 110, color: '#f97316', dmg: 12 });
+              groundHazards.push({
+                x: boss.x,
+                y: boss.y,
+                r: 58,
+                life: 110,
+                color: '#f97316',
+                dmgBoss: 12
+              });
               spawnSparks(boss.x, boss.y, 18, '#f97316');
             }
 
@@ -5314,6 +5321,13 @@ function drawRemotePlayer(rp) {
               if (vd < gh.r) {
                 player.x += Math.cos(va) * 1.8;
                 player.y += Math.sin(va) * 1.8;
+              }
+            } else if (gh.dmgBoss) {
+              const bossDistance = Math.hypot(gh.x - boss.x, gh.y - boss.y);
+              if (bossDistance < gh.r + boss.radius && gh.life % 20 === 0) {
+                boss.takeDamage(gh.dmgBoss, 0);
+                coop.sendCombat("boss_hit", { damage: gh.dmgBoss, poiseDamage: 0 });
+                spawnSparks(boss.x, boss.y, 5, gh.color);
               }
             } else if (gh.dmg) {
               const vd = Math.hypot(gh.x - player.x, gh.y - player.y);
